@@ -2,4 +2,7 @@
 *.xls
 *.csv
 *.avi
+*.xlsx
+*.txt
+*.m
 .idea/
