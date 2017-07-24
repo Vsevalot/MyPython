@@ -2,4 +2,4 @@
 *.xls
 *.csv
 *.avi
-.idea\*
+*\.idea\*
