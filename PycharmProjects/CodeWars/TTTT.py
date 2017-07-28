@@ -1,7 +1,9 @@
-x=[1,1,1,4,5,6]
-while (1):
+def find_next_square(sq):
+    from math import sqrt
+    a=sqrt(sq)
     try:
-        x.remove(1)
-    except(ValueError):
-        break
-print(x)
+        a=int(a)
+        return (a+1)*(a+1)
+    except:
+        return -1
+

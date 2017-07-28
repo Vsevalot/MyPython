@@ -137,6 +137,18 @@ def get_folder(path):
         name += reverse_name[i]
     return name
 
+def global_index(dict):
+    globalPower=0
+    for z in range(len(stagesNames)):
+        for i in range(len(channels)):
+            for k in range(len(rhythms)):
+                globalPower+=dict[channels[i]][rhythms[k]][stagesNames[z]]
+    for i in range(len(channels)):
+        for k in range(len(rhythms)):
+            for z in range(len(stagesNames)):
+                dict[channels[i]][rhythms[k]][stagesNames[z]]=round(10*dict[channels[i]][rhythms[k]][stagesNames[z]]/globalPower,6)
+    return dict
+
 from tkinter import Tk
 from tkinter.filedialog import askopenfilename
 Tk().withdraw()
@@ -176,7 +188,6 @@ for key in eegDict:
         eegDict[key][rhythms[i]]=butter_bandpass_filter(my[key],diapasons[i*2],diapasons[i*2+1],fs)
 
 
-
 stamps = [5, 8.2, 11.4, 14.6, 19.6]
 for i in range(len(stamps)):
     stamps[i] *= 60
@@ -209,35 +220,13 @@ for key in eegDict:
             print(int(i/(len(channels)*len(rhythms)*len(stagesNames))*100),'%')
             i+=1
 
-
-
-fullCSV=[]
-for i in range(len(stagesNames)):
-    fullCSV.append([''])
-    for k in range(len(channels)):
-        eegDict[channels[k]]=index(eegDict[channels[k]])
-        fullCSV[i].append(channels[k]+';')
-
-'''''''''''''''''
-# preparing to csv
-'''''''''''''''''
-for i in range(len(stagesNames)):
-    fullCSV[i][0] += str(stagesNames[i])
-    fullCSV[i][0] += ';'
-    for rhythm in rhythms:
-        fullCSV[i][0]+=rhythm
-        fullCSV[i][0]+=';'
-
-for i in range(len(stagesNames)):
-    for k in range(len(channels)):
-        for rhythm in rhythms:
-            fullCSV[i][k+1]+=str(eegDict[channels[k]][rhythm][stagesNames[i]])
-            fullCSV[i][k+1]+=';'
+eegDict=global_index(eegDict)
 
 
 '''''''''''''''''
-# writing to csv
+# writing to ANOVA csv
 '''''''''''''''''
+
 csvName=get_patient_name(path2File)
 path2Save=get_folder(path2File)
 path2Save+='/Analysed'
@@ -247,16 +236,6 @@ from os.path import exists
 if not exists(path2Save):
     makedirs(path2Save)
 
-for i in range(len(stagesNames)):
-    with open(path2Save+'/'+csvName +' '+ stagesNames[i]+'.csv', 'w') as file:
-        for line in fullCSV[i]:
-            file.write(line)
-            file.write('\n')
-        file.close()
-
-'''''''''''''''''
-# writing to ANOVA csv
-'''''''''''''''''
 path2ANOVAEEG='C:\ANOVA\EEG\EEG'
 if not exists(path2ANOVAEEG):
     makedirs(path2ANOVAEEG)
@@ -282,27 +261,30 @@ for i in range(len(channels)):
                 file.write(line)
                 file.close()
 
-print(csvName)
-
 
 '''''''''''''''''
 # writing to Clusters csv
 '''''''''''''''''
-path2ClustersEEG='C:\Clusters\EEG\EEG'
+path2ClustersEEG='C:\Clusters\EEG'
 if not exists(path2ClustersEEG):
     makedirs(path2ClustersEEG)
 
+clusterFileExist=False
+try:
+    open(path2ClustersEEG+'\EEG_Clusters.csv','r')
+    clusterFileExist=True
+except:
+    clusterFileExist = False
 
-with open(path2ClustersEEG+'EEG_Results.csv', 'a') as file:
-    '''
-    line='subject;'
-    for k in range(len(channels)):
-        for z in range(len(rhythms)):
-            line+=str(channels[k]+'_'+rhythms[z])+';'
-    line=line[:len(line)-1] # all without last ;
-    line+='\n'
-    file.write(line)
-'''
+with open(path2ClustersEEG+'\EEG_Clusters.csv', 'a') as file:
+    if not clusterFileExist:
+        line='Subject;'
+        for k in range(len(channels)):
+            for z in range(len(rhythms)):
+                line+=str(channels[k]+'_'+rhythms[z])+';'
+        line=line[:len(line)-1] # all without last ;
+        line+='\n'
+        file.write(line)
 
     for i in range(len(stagesNames)):
         line = csvName+';'
