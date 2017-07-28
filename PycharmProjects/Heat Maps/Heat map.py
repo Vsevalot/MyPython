@@ -25,7 +25,8 @@ def indexes_reader(path2indexes):
                     mean[z%5][i]+=float(numbers[i])
             except:
                 title=line.split(';')[1:]
-                title[-1]=title[-1][:-1] # remove '\n' from last element
+                if(title[-1][-1]=='\n'):
+                    title[-1]=title[-1][:-1] # remove '\n' from last element
                 if(title[0][0]=='I'): # del IED_
                     for k in range(len(title)):
                         title[k]=title[k][4:]
@@ -38,63 +39,110 @@ def indexes_reader(path2indexes):
     return indexDict
 
 def electrodes_map(headMap):
-    headMap[0][6]="AF3"
-    headMap[0][7]="AF3"
-    headMap[0][-8]="AF4"
-    headMap[0][-7]="AF4"
+    headMap[1][6]="AF3"
+    headMap[1][7]="AF3"
+    headMap[1][-8]="AF4"
+    headMap[1][-7]="AF4"
 
-    headMap[1][3]="F7"
-    headMap[1][4]="F7"
-    headMap[1][-4]="F8"
-    headMap[1][-5]="F8"
+    headMap[2][3]="F7"
+    headMap[2][4]="F7"
+    headMap[2][-4]="F8"
+    headMap[2][-5]="F8"
 
-    headMap[1][8]="F3"
-    headMap[1][9]="F3"
-    headMap[1][-9]="F4"
-    headMap[1][-10]="F4"
+    headMap[2][8]="F3"
+    headMap[2][9]="F3"
+    headMap[2][-9]="F4"
+    headMap[2][-10]="F4"
 
-    headMap[2][4]="FC5"
-    headMap[2][5]="FC5"
-    headMap[2][-5]="FC6"
-    headMap[2][-6]="FC6"
+    headMap[3][4]="FC5"
+    headMap[3][5]="FC5"
+    headMap[3][-5]="FC6"
+    headMap[3][-6]="FC6"
 
-    headMap[3][1]="T7"
-    headMap[3][2]="T7"
-    headMap[3][-2]="T8"
-    headMap[3][-3]="T8"
+    headMap[4][1]="T7"
+    headMap[4][2]="T7"
+    headMap[4][-2]="T8"
+    headMap[4][-3]="T8"
 
-    headMap[6][4]="P7"
-    headMap[6][5]="P7"
-    headMap[6][-5]="P8"
-    headMap[6][-6]="P8"
+    headMap[7][4]="P7"
+    headMap[7][5]="P7"
+    headMap[7][-5]="P8"
+    headMap[7][-6]="P8"
 
-    headMap[7][7]="O1"
-    headMap[7][8]="O1"
-    headMap[7][-8]="O2"
-    headMap[7][-9]="O2"
+    headMap[8][7]="O1"
+    headMap[8][8]="O1"
+    headMap[8][-8]="O2"
+    headMap[8][-9]="O2"
 
     return headMap
 
+def resizer(HeadMap, multiple):
+    for i in range(len(HeadMap)):
+        nLine = []
+        for k in range(len(HeadMap[i])):
+            for z in range(multiple):
+                nLine.append(HeadMap[i][k])
+        HeadMap[i] = nLine.copy()
+    newHead = []
+    for i in range(len(HeadMap)):
+        for k in range(multiple*3):
+            newHead.append(HeadMap[i])
+    return newHead
+
+def transponate(arr):
+    nArr=[]
+    for i in range(len(arr[0])):
+        collumn = []
+        for k in range(len(arr)):
+            collumn.append(arr[k][i])
+        nArr.append(collumn)
+    return nArr
+
+def smoothing(HeadMap, sigma):
+    for i in range(len(HeadMap)): # Gaussian smoothing
+        HeadMap[i]=sp.filters.gaussian_filter(HeadMap[i], sigma = sigma, order = 0)
+    HeadMap=transponate(HeadMap)
+    for k in range(len(HeadMap)):
+        HeadMap[k] = sp.filters.gaussian_filter(HeadMap[k], sigma=sigma, order=0)
+    return transponate(HeadMap)
+
 try:
-    indexDict = indexes_reader('C:\Clusters\EEG\EEG_Clusters.csv')
+    indexDict = indexes_reader('C:\\Users\Dante\Downloads\Global indexes.csv')
+    #indexDict = indexes_reader('C:\Clusters\EEG\EEG_Clusters.csv')
 except:
     Tk().withdraw()
     path2File = askopenfilename(initialdir="C:\\Users\Dante\Desktop\Новая папка",
                                filetypes =(("CSV File", "*.csv"),("Text File", "*.txt"), ("All Files","*.*")),
                                title = "Choose a clusters file"
                                )
+    if(path2File==''):
+        exit(0)
     indexDict=indexes_reader(path2File)
 
-
-
-
-print(indexDict)
 a=[0]*24 # line in head matrix
 headMap=[]
-for i in range(8):
+for i in range(10):
     headMap.append(a.copy())
 
 headMap=electrodes_map(headMap)
+
+
+M=[]
+m=[]
+b=[]
+for stage in indexDict:
+    a = []
+    for chrh in indexDict[stage]:
+        a.append(indexDict[stage][chrh])
+    b.append(a)
+
+
+for value in b:
+    M.append(max(value))
+    m.append(min(value))
+
+
+import scipy.ndimage as sp
 
 for i in range(len(stages)):
     for k in range(len(rhythms)):
@@ -109,5 +157,12 @@ for i in range(len(stages)):
                         except:
                             break
 
-        plt.imshow(meanIndexes, cmap="hot")
+        meanIndexes=resizer(meanIndexes,3)
+        meanIndexes=smoothing(meanIndexes,2)
+
+        plt.imshow(meanIndexes, cmap="jet")
+        if(i==0):
+            plt.title(rhythms[k])
+        plt.axis('off')
+        #plt.savefig("./Images/"+stages[i]+'_'+rhythms[k] +".png")
 plt.show()
