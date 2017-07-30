@@ -1,9 +1,9 @@
 from PIL import Image
-from PIL import ImageFilter
 
-im=Image.open("C:\\Users\Dante\AppData\Local\GitHubDesktop\\app-0.6.2\MyPython\PycharmProjects\Heat Maps\Images\Background_Theta.png")
-imout = im.filter(ImageFilter.BLUR)
-for i in range(10):
-    imout=imout.filter(ImageFilter.SMOOTH)
-im.show()
-imout.show()
+path2Indexes="C:\\Users\Dante\AppData\Local\GitHubDesktop\\app-0.6.2\MyPython\PycharmProjects\Heat Maps\Images\All.png"
+Indexes=Image.open(path2Indexes)
+path2Form="C:\\Users\Dante\AppData\Local\GitHubDesktop\\app-0.6.2\MyPython\PycharmProjects\Heat Maps\Images\Form.png"
+headShape=Image.open(path2Form)
+Indexes.paste(headShape,mask=headShape)
+Indexes.show()
+Indexes.save("headIndexes.png", format="png")

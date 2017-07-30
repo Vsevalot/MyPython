@@ -107,8 +107,9 @@ def smoothing(HeadMap, sigma):
     return transponate(HeadMap)
 
 try:
-    indexDict = indexes_reader('C:\\Users\Dante\Downloads\Global indexes.csv')
+    #indexDict = indexes_reader('C:\\Users\Dante\Downloads\Global indexes.csv')
     #indexDict = indexes_reader('C:\Clusters\EEG\EEG_Clusters.csv')
+    indexDict = indexes_reader('C:\Clusters\EEG\\2.txt')
 except:
     Tk().withdraw()
     path2File = askopenfilename(initialdir="C:\\Users\Dante\Desktop\Новая папка",
@@ -130,10 +131,10 @@ headMap=electrodes_map(headMap)
 M=[]
 m=[]
 b=[]
-for stage in indexDict:
+for i in range(len(stages)):
     a = []
-    for chrh in indexDict[stage]:
-        a.append(indexDict[stage][chrh])
+    for chrh in indexDict[stages[i]]:
+        a.append(indexDict[stages[i]][chrh])
     b.append(a)
 
 
@@ -143,26 +144,28 @@ for value in b:
 
 
 import scipy.ndimage as sp
-
+from copy import deepcopy
+plt.figure(figsize=(40.0, 25.0))
 for i in range(len(stages)):
     for k in range(len(rhythms)):
         plt.subplot(5, 4, i*len(rhythms)+k+1)
-        meanIndexes=headMap.copy()
+        meanIndexes=deepcopy(headMap)
         for channel_rhythm in indexDict[stages[i]]:
             if(channel_rhythm[-5:]==rhythms[k]): # if found current rhythm
                 for headLine in meanIndexes:
-                    while(1): # replace each channel with value from dict
-                        try:
-                            headLine[headLine.index(channel_rhythm[:-6])]=indexDict[stages[i]][channel_rhythm]
-                        except:
-                            break
-
+                    electrodes=[z for z, x in enumerate(headLine) if x == channel_rhythm[:-6]] # search for electrode location
+                    for z in range(len(electrodes)):
+                        headLine[electrodes[z]]=indexDict[stages[i]][channel_rhythm] # replace each channel with value from dict
+                    if(len(electrodes)>0): # if electrode was found
+                        break
         meanIndexes=resizer(meanIndexes,3)
         meanIndexes=smoothing(meanIndexes,2)
-
-        plt.imshow(meanIndexes, cmap="jet")
+        plt.imshow(meanIndexes, cmap="jet", vmax=max(M), vmin=min(m))
         if(i==0):
             plt.title(rhythms[k])
         plt.axis('off')
         #plt.savefig("./Images/"+stages[i]+'_'+rhythms[k] +".png")
+
+
+plt.savefig("./Images/All.png")
 plt.show()
