@@ -1,6 +1,8 @@
 import matplotlib.pyplot as plt
 from tkinter import Tk
 from tkinter.filedialog import askopenfilename
+import scipy.ndimage as sp
+from copy import deepcopy
 
 stages=['Background', 'First TOVA test', 'Hyperventilation', 'Second TOVA test', 'Aftereffect']
 rhythms=['Theta','Alpha','BetaL','BetaH']
@@ -108,8 +110,8 @@ def smoothing(HeadMap, sigma):
 
 try:
     #indexDict = indexes_reader('C:\\Users\Dante\Downloads\Global indexes.csv')
-    #indexDict = indexes_reader('C:\Clusters\EEG\EEG_Clusters.csv')
-    indexDict = indexes_reader('C:\Clusters\EEG\\2.txt')
+    indexDict = indexes_reader('C:\Clusters\EEG\EEG_Clusters.csv')
+    #indexDict = indexes_reader('C:\Clusters\EEG\\2.txt')
 except:
     Tk().withdraw()
     path2File = askopenfilename(initialdir="C:\\Users\Dante\Desktop\Новая папка",
@@ -128,6 +130,9 @@ for i in range(10):
 headMap=electrodes_map(headMap)
 
 
+'''''''''''''''
+Max and min
+'''''''''''''''
 M=[]
 m=[]
 b=[]
@@ -136,15 +141,11 @@ for i in range(len(stages)):
     for chrh in indexDict[stages[i]]:
         a.append(indexDict[stages[i]][chrh])
     b.append(a)
-
-
 for value in b:
     M.append(max(value))
     m.append(min(value))
 
 
-import scipy.ndimage as sp
-from copy import deepcopy
 plt.figure(figsize=(40.0, 25.0))
 for i in range(len(stages)):
     for k in range(len(rhythms)):
@@ -160,12 +161,9 @@ for i in range(len(stages)):
                         break
         meanIndexes=resizer(meanIndexes,3)
         meanIndexes=smoothing(meanIndexes,2)
-        plt.imshow(meanIndexes, cmap="jet", vmax=max(M), vmin=min(m))
+        plt.imshow(meanIndexes, cmap="jet", vmax=M[i], vmin=m[i])
         if(i==0):
             plt.title(rhythms[k])
         plt.axis('off')
-        #plt.savefig("./Images/"+stages[i]+'_'+rhythms[k] +".png")
-
-
 plt.savefig("./Images/All.png")
 plt.show()
