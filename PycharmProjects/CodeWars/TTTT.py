@@ -1,9 +1,5 @@
-def find_next_square(sq):
-    from math import sqrt
-    a=sqrt(sq)
-    try:
-        a=int(a)
-        return (a+1)*(a+1)
-    except:
-        return -1
+a="25,3"
+
+print(a[:2],a[3:])
+
 
