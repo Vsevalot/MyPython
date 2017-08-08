@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 from scipy.signal import butter, lfilter
 from math import sqrt
 from numpy import array, mean, std
+from matplotlib.backends.backend_pdf import PdfPages
 
 def Motion_Data_2_Dict(Path2MotionFile):
     notanumber=True
@@ -205,7 +206,10 @@ with open(path2Save+'/'+csvName+" Accelerometer" +'.csv', 'w') as file:
         file.write(line)
     file.close()
 
+
+pd=PdfPages('test.pdf')
 plt.figure(figsize=(24.0, 15.0))
+plt.rc('font', size=26)
 for i in range(6):
 
     if (i < 3):
@@ -220,7 +224,7 @@ for i in range(6):
         plt.title(fNames[i - 3])
         plt.xlabel('Time(sec)')
         plt.ylabel('Value')
-plt.savefig(path2Save+'/'+csvName+ ' Acce signals.png')
+pd.savefig()
 
 plt.figure(figsize=(24.0, 15.0))
 plt.plot(myDict['TIMESTAMP'], acceModule)
@@ -233,7 +237,8 @@ plt.ylabel('Value(g)')
 for i in range(len(stagesNames)):
     plt.text(myDict['TIMESTAMP'][stageTime[i]] + 50, 3.5, stagesNames[i],
              bbox={'facecolor': 'red', 'alpha': 0.5, 'pad': 10})
-plt.savefig(path2Save+'/'+csvName+  " Accelerometer's value module.png")
+pd.savefig()
+pd.close()
 
 
 '''''''''''''''''

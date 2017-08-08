@@ -165,5 +165,5 @@ for i in range(len(stages)):
         if(i==0):
             plt.title(rhythms[k])
         plt.axis('off')
-plt.savefig("./Images/All.png")
+plt.savefig("./Images/All.tif",dpi=(300,300))
 plt.show()

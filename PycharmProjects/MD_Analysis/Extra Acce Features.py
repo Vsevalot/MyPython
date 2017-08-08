@@ -5,6 +5,7 @@ from scipy.signal import butter, lfilter
 from numpy import fft
 from math import sqrt
 from copy import deepcopy
+import matplotlib.pyplot as plt
 
 global stages
 stages=['Background', 'First TOVA test', 'Hyperventilation', 'Second TOVA test', 'Aftereffect']
@@ -90,6 +91,7 @@ def axis_feature(axis):
     for i in range(len(axis)):
         if((axis[i]>0) and (axis[i-1]<0))or((axis[i]<0) and (axis[i-1]>0)):
             zcr+=1
+
     features.append(zcr)
     AXIS=fft.fft(axis)
     energy=0
@@ -117,6 +119,12 @@ def activity(x,y,z,rate=1.1): # Take three axis arrays, return activity and (Pea
                 peakTime+=1
                 if(arr[i-1]>=level):
                     peakCount+=1
+
+
+
+    plt.plot(arr)
+    plt.axis([10,len(arr),0,0.25])
+    plt.show()
     return sum(arr), peakTime/peakCount
 
 def avZCR(x,y,z):
@@ -129,7 +137,7 @@ def get_patient_name(path):
     slash=0
     reverse_name=''
     for i in range(len(path)-1,-1,-1):
-        if (path[i]=='/'):
+        if (path[i]=='/' or path[i]=='\\' ):
             slash+=1
             continue
         if (slash == 1):
