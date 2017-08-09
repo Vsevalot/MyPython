@@ -1,7 +1,9 @@
 from typing import Dict
-
+from os import makedirs
+from os.path import exists
 import numpy as np
-from time import sleep
+from tkinter import Tk
+from tkinter.filedialog import askopenfilename
 
 stages=['Functional repose', 'First TOVA test', 'Functional load', 'Second TOVA test', 'Aftereffect']
 rhythms=['Theta','Alpha','BetaL','BetaH']
@@ -39,10 +41,8 @@ def ABPData2Dict(Path2ABPFile: str) -> Dict[str,np.ndarray]:
     return d
 
 def global_indexes(abpdict):
-    title = ["Theta", "Alpha", "BetaL", "BetaH"] * 14
-    for i in range(len(channels)):
-        for k in range(5):
-            title[i * 5 + k] = channels[i] + '_' + title[i * 5 + k]
+    title = list(abpdict.keys())
+    title.remove("sysTime")
 
     sumPower = 0
     for key in title:
@@ -55,11 +55,38 @@ def global_indexes(abpdict):
 
     return abpdict
 
-
+def get_patient_name(path):
+    slash=0
+    reverse_name=''
+    for i in range(len(path)-1,-1,-1):
+        if (path[i]=='/' or path[i]=='\\' ):
+            slash+=1
+            continue
+        if (slash == 1):
+            reverse_name+=path[i]
+        if (slash == 2):
+            break
+    name=''
+    for i in range(len(reverse_name) - 1, -1, -1):
+        name+=reverse_name[i]
+    return name
 
 if (__name__=="__main__"):
-    path = "C:\\Users\УрФУ\Desktop\ANOVA\\05.06_Сысков\Patient_AverageBandPowers.csv"
-    abpDict=ABPData2Dict(path)
+    '''''''''''''''''
+     Opening file
+    '''''''''''''''''
+    try:
+        #path2File="C:\\Users\УрФУ\Desktop\ANOVA\\05.06_Сысков\Patient_AverageBandPowers.csv"
+        abpDict = ABPData2Dict(path2File)
+    except:
+        Tk().withdraw()
+        path2File = askopenfilename(initialdir="C:\\Users\Dante\Desktop\Новая папка",
+                                    filetypes=(("CSV File", "*.csv"), ("Text File", "*.txt"), ("All Files", "*.*")),
+                                    title="Choose ABP data file"
+                                    )
+        if (path2File == ''):
+            exit(0)
+        abpDict = ABPData2Dict(path2File)
 
     '''''''''''''''''
      Time stages
@@ -67,14 +94,11 @@ if (__name__=="__main__"):
     if(True):
         startTime=abpDict["sysTime"][0] # First element as a start time
         for i in range(len(abpDict["sysTime"])):
-            abpDict["sysTime"][i]=(abpDict["sysTime"][i]-startTime)/1000 # Normalize to start time with seconds
+            abpDict["sysTime"][i]=(abpDict["sysTime"][i]-startTime)# Normalize to start time with seconds
 
-        stamps = [5, 8.2, 11.4, 14.6, 19.6] # Stages times
+        stamps = [5, 8.2, 11.4, 14.6] # Stages times
         for i in range(len(stamps)):
             stamps[i] *= 60
-
-        if (stamps[-1] > abpDict["sysTime"][-1]): # If file has less length reduce last stage time
-            stamps[-1] = abpDict["sysTime"][-2]
 
         stageTime = [0]
         k = 0
@@ -85,8 +109,10 @@ if (__name__=="__main__"):
                 if (k == len(stamps)):
                     break
 
+        stageTime.append(len(abpDict["sysTime"])-1)
+
         for key in abpDict:
-            abpDict[key]={stages[i]:abpDict[key][i:i+1] for i in range(len(stages))}
+            abpDict[key]={stages[i]:abpDict[key][stageTime[i]:stageTime[i+1]] for i in range(len(stages))}
 
     '''''''''''''''''
      Indexes calculating
@@ -96,17 +122,13 @@ if (__name__=="__main__"):
             if(key=="sysTime"):
                 continue
             for stage in stages:
-                abpDict = np.sum(abpDict[key][stage]) # calculating power for each stage
-
+                abpDict[key][stage] = np.sum(abpDict[key][stage]) # calculating power for each stage
         abpDict=global_indexes(abpDict) # calculating global indexes
 
     '''''''''''''''''
      Saving to csv
     '''''''''''''''''
     if (True):
-        from os import makedirs
-        from os.path import exists
-
         path2ClustersAPB = 'C:\Clusters\ABP'
         if not exists(path2ClustersAPB):
             makedirs(path2ClustersAPB)
@@ -119,24 +141,19 @@ if (__name__=="__main__"):
             clusterFileExist = False
 
         with open(path2ClustersAPB + '\ABP features.csv', 'a') as file:
+            columnNames = list(abpDict.keys())
+            columnNames.remove("sysTime") # All dict keys without "sysTime"
             if not clusterFileExist:
-                line = 'Subject;'
-                for k in range(len(abpDict)-1):
-                    line += columnNames[k] + ';'
-                line = line[:len(line) - 1]  # all without last ';'
-                line += '\n'
+                line = "Subject;"
+                for name in columnNames:
+                    line += name + ';'
+                line = line[:- 1] +  '\n'  # replace last ';' with '\n'
                 file.write(line)
 
-
-
-        for i in range(len(stages)):
-            line=""
-            for key in abpDict:
-                if (key == "sysTime"):
-                    continue
-                line+=str(abpDict[key][stages])
-
-
-
-
-
+            patientName=get_patient_name(path2File)
+            for i in range(len(stages)):
+                line = patientName + '_' + stages[i] + ';'
+                for name in columnNames:
+                    line+=str(abpDict[name][stages[i]])+';'
+                line = line[:-1] + '\n'
+                file.write(line)
