@@ -1,22 +1,9 @@
-import time
-def whoIsNext(names : list, r : int) -> str:
-    i=0
-    while(5*(2**i)<r):
-        i+=1
-    if(i>0):
-        r-=5*(2**(i-1))
-    else:
-        return names[r-1]
-    position=1
-    while(1):
-        if(r<position*(2**(i-1))):
-            break
-        position+=1
-    return names[position-1]
+def first_non_repeating_letter(string: str)->str:
+    alphNumber=[]
+    for i in range(26):
+        alphNumber.append(ord('A')+i)
 
-
-names = ["Sheldon", "Leonard", "Penny", "Rajesh", "Howard"]
-
-
-print(whoIsNext(names,1000000000))
-
+    case=ord('a')-ord('A')
+    for letter in string:
+        if (ord(letter) in alphNumber) or ((ord(letter)-case) in alphNumber):
+            alphNumber.remove()
