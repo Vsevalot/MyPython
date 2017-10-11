@@ -1,5 +1,7 @@
 import os
 import datetime
+import matplotlib.pyplot as plt
+
 
 def matName2Time(matName: str) -> [datetime.date,datetime.time]:
     t=datetime.time(int(matName[-12:-10]), int(matName[-9:-7]), int(matName[-6:-4]))
@@ -10,7 +12,7 @@ def reportName2Date(reportName: str) -> datetime.date:
     d=datetime.date(int("20"+reportName[-6:-4]),int(reportName[-8:-6]), int(reportName[-10:-8]))
     return d
 
-def reportTime(strTime: str, reportPath) -> datetime.time:
+def reportTime(strTime: str, reportPath: str) -> datetime.time:
     point=':' # default delimiter
     for char in strTime:
         if char=='.':
@@ -27,12 +29,12 @@ def reportTime(strTime: str, reportPath) -> datetime.time:
         print("Something goes wrong, check time format:", reportPath)
         exit(1)
     if (len(t) == 2): # if there is one delimiter in the time
-        if ((len(t[0])==2)or(len(t[0])==1)) and len(t[1])==2:
+        if (len(t[0])==2 or len(t[0])==1) and len(t[1])==2:
             return datetime.time(int(t[0]), int(t[1]), 00)
         print("Something goes wrong, check time format:", reportPath)
         exit(1)
     if (len(t)==3): # if there are two delimiters in the time
-        if ((len(t[0])==2)or(len(t[0])==1)) and len(t[1])==2 and  len(t[2])==2:
+        if (len(t[0])==2 or len(t[0])==1) and len(t[1])==2 and  len(t[2])==2:
             return datetime.time(int(t[0]), int(t[1]), int(t[2]))
         print("Something goes wrong, check time format:", reportPath)
         exit(1)
@@ -42,7 +44,7 @@ def reportTime(strTime: str, reportPath) -> datetime.time:
 def timeDif(time1, time2 ) -> int:
     return time1.hour*3600+time1.minute*60+time1.second-(time2.hour*3600+time2.minute*60+time2.second)
 
-def readCSV(path2csv:str)->list:
+def readCSV(path2csv:str) -> list:
     with open(path2csv, 'r') as file:
         lines=[line.split(';') for line in file.readlines()] # reading all lines in the file with rows as elements of the list
         emptyLine=True
@@ -54,8 +56,10 @@ def readCSV(path2csv:str)->list:
                 del lines[-1]
 
         squareCSV=True
-        for line in lines: # check for square form of the csv (the number of columns is constant in the file)
-            if(len(line)!=len(lines[0])):
+        for line in range(len(lines)): # check for square form of the csv (the number of columns is constant in the file)
+            if(lines[line][-1][-1]=='\n'): # remove '\n' symbol which ends a line
+                lines[line][-1]=lines[line][-1][:-1]
+            if(len(lines[line])!=len(lines[0])):
                 squareCSV=False
                 print("CSV file: "+path2csv+" does not have square form (the number of columns is changing through the file)")
                 exit(1)
@@ -63,7 +67,7 @@ def readCSV(path2csv:str)->list:
             data=[[value[i] for value in lines] for i in range(len(lines[0]))] # transpose the list to make columns elements of the list
             return data
 
-def results2dict(results:list)->dict:
+def results2dict(results:list) -> dict:
     for i in range(len(results)): # convert values from "'abc'\n" to "abc"
         for k in range(len(results[i])):
             if(results[i][k]!='' and results[i][k]!='\n'):
@@ -94,26 +98,48 @@ def stageDetector(matFile:str,reportList:list):
         for i in range(startLine,len(csv[0])):
             rTime=reportTime(csv[0][i], report)
             if rTime>=matTime: # if found time which is later or equal than matFile
-                if (timeDif(rTime,matTime) + 30 <= timeDif(matTime, reportTime(csv[0][i-1], report))):
-                    print(matFile, rTime,csv[1][i])
+                if (timeDif(rTime,matTime) + 30 <= timeDif(matTime, reportTime(csv[0][i-1], report))): # +30 seconds because algorithm has a delay
+                    #print(matFile, rTime,csv[1][i])
                     return csv[1][i] # if i line is closer to the matTime return i line
                 else:
-                    print(matFile, reportTime(csv[0][i-1], report), csv[1][i-1])
+                    #print(matFile, reportTime(csv[0][i-1], report), csv[1][i-1])
                     return csv[1][i-1] # else return previous line because it's closer to the matTime
     return None # if none report in reportList much return None
 
 
 if __name__ == "__main__":
+    '''''''''''''''''
+    # Preparing files
+    '''''''''''''''''
     path2results="E:\\test\\results.csv"
-    data=readCSV(path2results)
-    results=results2dict(data)
-
-    path2reports="E:\\test\Repotrs\complete"
+    results=results2dict(readCSV(path2results))
+    path2reports="E:\\test\\Reports\complete"
     reportsList = [ os.path.join(path2reports, f) for f in os.listdir(path2reports) if os.path.isfile(os.path.join(path2reports, f))]
 
-    column="Column_4"
-    for i in range(len((results[column]))):
-        if stageDetector(results[column][i],reportsList):
-            continue
-            #print(results[column][i],stageDetector(results[column][i],reportsList))
+    '''''''''''''''''
+    # Data collection
+    '''''''''''''''''
+    histValue=[]
+    columns=list(results.keys())
+    for column in range(len(columns)):
+        histValue.append([])
+        for matFile in results[columns[column]]:
+            histValue[column].append(stageDetector(matFile,reportsList)) # returns None if can't find time from a mat file
+        histValue[column] = [ int(v) for v in histValue[column] if v is not None] # v[:1] to convert "3\n" to '3'
+
+    '''''''''''''''''
+    # Plotting
+    '''''''''''''''''
+    plt.figure(figsize=(40.0, 25.0))
+    for column in range(len(columns)):
+        plt.subplot(2,2,column+1)
+        plt.hist(histValue[column])
+        plt.title("Anesthesia stage for the group "+str(column+1))
+        plt.xlabel("Stage")
+        plt.ylabel("Value")
+    plt.show()
+
+
+
+
 
