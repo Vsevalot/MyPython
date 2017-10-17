@@ -184,6 +184,7 @@ if __name__ == "__main__":
         parts[column]=int(100*round(len(histValue[column])/parts[column],2))
 
 
+
     percentage=[]
     k=1
     for usedPart in parts:
@@ -191,7 +192,10 @@ if __name__ == "__main__":
             percentage.append(k)
         k+=1
 
-    borders=[len(histV) for histV in histValue]
+    bar_locations = [-1,0,1,2,3,4,5]
+    histPer=[[int(100*round(column.count(i)/len(column),2)) for i in bar_locations] for column in histValue]
+
+
 
     '''''''''''''''''
     # Plotting
@@ -199,16 +203,15 @@ if __name__ == "__main__":
     x.rcParams.update({'font.size': 22})
     plt.figure(figsize=(40.0, 25.0))
     for column in range(len(columns)):
-        histValue[column]=sorted(histValue[column])
         a=plt.subplot(2,2,column+1)
-        plt.hist(histValue[column])
-        plt.title("Anesthesia stage for the group "+str(column+1))
-        plt.xlabel("Stage")
-        plt.ylabel("Value")
-        #names = ["Artifacts", "Wakefulness", "First stage", "Second stage", "Third stage","Fourth stage"]
-        #a.set_xticks([-1.3,0.3,1.3,2.3,3.3,4.3,5.3])
-        #a.set_xticklabels(names)
-        plt.axis([-0.3, 5, 0, max(borders)])
+        plt.bar(bar_locations,histPer[column],align='center')
+        plt.title("Anesthesia stage distribution for the group "+str(column+1))
+        #plt.xlabel("Stage")
+        plt.ylabel("Percentage")
+        names = ["Artifacts", "Wakefulness", "First stage", "Second stage", "Third stage","Fourth stage", "Fifth stage"]
+        #a.set_xticks(bar_locations)
+        a.set_xticklabels(names)
+        plt.axis([-0.5, 6, 0,100])
 
     a=plt.subplot(2, 2, 4)
     plt.hist(percentage, color='r')
@@ -220,6 +223,6 @@ if __name__ == "__main__":
     #a.set_xticks([ 1, 2, 3])
     #a.set_xticklabels(names)
     #plt.show()
-    plt.savefig("E:\\test\\Hist.jpg", dpi=300)
+    plt.savefig("E:\\test\\PercentageHist.jpg", dpi=300)
 
 
