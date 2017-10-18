@@ -28,28 +28,34 @@ def reportTime(strTime: str, reportPath: str) -> datetime.time: # convert string
         if char=='.':
             point = strTime.split('.')
             break
+        if char=='-':
+            point = strTime.split('-')
+            break
     t = strTime.split(point)
-
-    if (len(t) == 1): # if there are no delimiters in the time
-        t = t[0]
-        if (len(t) == 3) or (len(t) == 4):  # if time 12:33:00 in format 1233
-            return datetime.time(int(t[:-2]), int(t[-2:]), 00)
-        if (len(t) == 5) or (len(t) == 6):
-            return datetime.time(int(t[:-4]), int(t[-4:-2]), int(t[-2:])) # if time 12:33:00 in format 123300
+    try:
+        if (len(t) == 1): # if there are no delimiters in the time
+            t = t[0]
+            if (len(t) == 3) or (len(t) == 4):  # if time 12:33:00 in format 1233
+                return datetime.time(int(t[:-2]), int(t[-2:]), 00)
+            if (len(t) == 5) or (len(t) == 6):
+                return datetime.time(int(t[:-4]), int(t[-4:-2]), int(t[-2:])) # if time 12:33:00 in format 123300
+            print("Something goes wrong, check time format:", reportPath)
+            exit(1)
+        if (len(t) == 2): # if there is one delimiter in the time
+            if (len(t[0])==2 or len(t[0])==1) and len(t[1])==2:
+                return datetime.time(int(t[0]), int(t[1]), 00)
+            print("Something goes wrong, check time format:", reportPath)
+            exit(1)
+        if (len(t)==3): # if there are two delimiters in the time
+            if (len(t[0])==2 or len(t[0])==1) and len(t[1])==2 and  len(t[2])==2:
+                return datetime.time(int(t[0]), int(t[1]), int(t[2]))
+            print("Something goes wrong, check time format:", reportPath)
+            exit(1)
         print("Something goes wrong, check time format:", reportPath)
         exit(1)
-    if (len(t) == 2): # if there is one delimiter in the time
-        if (len(t[0])==2 or len(t[0])==1) and len(t[1])==2:
-            return datetime.time(int(t[0]), int(t[1]), 00)
+    except:
         print("Something goes wrong, check time format:", reportPath)
         exit(1)
-    if (len(t)==3): # if there are two delimiters in the time
-        if (len(t[0])==2 or len(t[0])==1) and len(t[1])==2 and  len(t[2])==2:
-            return datetime.time(int(t[0]), int(t[1]), int(t[2]))
-        print("Something goes wrong, check time format:", reportPath)
-        exit(1)
-    print("Something goes wrong, check time format:", reportPath)
-    exit(1)
 
 def timeDif(time1, time2 ) -> int: # calculate difference between to times in seconds
     return time1.hour*3600+time1.minute*60+time1.second-(time2.hour*3600+time2.minute*60+time2.second)
@@ -98,8 +104,8 @@ def stageDetector(matFile:str,reportList:list): # search for the closest time to
     def chronoChecker(times:list, report:str)->bool: # Check the correct order in the given time list
         for time in range(1,len(times)):
             if timeDif(times[time],times[time-1])<0:
-                print("Wrong time order check file:", report)
-                return False
+                print("Wrong time order check file:", report, times[time],'<',times[time-1])
+                exit(0)
         return True
 
     '''''''''''''''''
@@ -177,24 +183,17 @@ if __name__ == "__main__":
     parts=[] # To calculate a percentage of processed files for each column
     for column in range(len(columns)):
         histValue.append([])
+        n=0
+        p=0
         for matFile in results[columns[column]]:
             histValue[column].append(stageDetector(matFile,reportsList)) # returns None if can't find time from a mat file
-        parts.append(len(histValue[column]))
-        histValue[column] = [ int(v) for v in histValue[column] if v is not None] # v[:1] to convert "3\n" to '3'
-        parts[column]=int(100*round(len(histValue[column])/parts[column],2))
+        parts.append(int(100*(len(histValue[column])-histValue[column].count(None))/len(histValue[column])))
 
+        histValue[column] = [ int(v) for v in histValue[column] if v is not None]
 
-
-    percentage=[]
-    k=1
-    for usedPart in parts:
-        for i in range(usedPart):
-            percentage.append(k)
-        k+=1
-
-    bar_locations = [-1,0,1,2,3,4,5]
-    histPer=[[int(100*round(column.count(i)/len(column),2)) for i in bar_locations] for column in histValue]
-
+    stages = [-1,0,1,2,3,4,5,6,7]
+    histPer=[[100*column.count(i)/len(column) for i in stages] for column in histValue]
+    print(histPer)
 
 
     '''''''''''''''''
@@ -204,17 +203,17 @@ if __name__ == "__main__":
     plt.figure(figsize=(40.0, 25.0))
     for column in range(len(columns)):
         a=plt.subplot(2,2,column+1)
-        plt.bar(bar_locations,histPer[column],align='center')
+        plt.bar(stages,histPer[column],align='center')
         plt.title("Anesthesia stage distribution for the group "+str(column+1))
         #plt.xlabel("Stage")
         plt.ylabel("Percentage")
-        names = ["Artifacts", "Wakefulness", "First stage", "Second stage", "Third stage","Fourth stage", "Fifth stage"]
-        #a.set_xticks(bar_locations)
+        names = ["Artifacts", "Wakefulness", "First stage", "Second stage", "Third stage","Fourth stage", "Fifth stage","sixth stage","Seventh stage"]
+        a.set_xticks(stages)
         a.set_xticklabels(names)
-        plt.axis([-0.5, 6, 0,100])
+        plt.axis([-1.5, 5.5, 0,100])
 
     a=plt.subplot(2, 2, 4)
-    plt.hist(percentage, color='r')
+    plt.bar([1,2,3],parts, color='g',align='center')
     plt.title("Percentage of use mat files for the each group")
     plt.xlabel("Group (column)")
     plt.ylabel("Percentage")
