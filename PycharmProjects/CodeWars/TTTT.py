@@ -1,3 +1,2 @@
-a=[1,2,3,4]
-a.append(None)
-print(len(a))
+a="12345"
+print(a[:3])
