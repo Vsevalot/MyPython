@@ -1,17 +1,16 @@
-import datetime
+from openpyxl import load_workbook
 
-def matName2Time(matName: str) -> [datetime.date,datetime.time]: # convert Mat file's name to date and time
-    opening=matName.index('(')
-    closing=matName.index(')')
-    timeDelta=30*int(matName[opening+1:closing])
-    matName=matName[:opening]
-    t=datetime.timedelta(hours=int(matName[-12:-10]), minutes=int(matName[-9:-7]), seconds=int(matName[-6:-4])+timeDelta)
-    d=datetime.date(int(matName[-21:-17]),int(matName[-17:-15]), int(matName[-15:-13]))+t
-    m,s=divmod(t.seconds, 60)
-    h,m=divmod(m, 60)
-    t=datetime.time(h,m,s)
-    return d,t
+path2results = "E:\\test\\results.xlsx"
 
-a='20091231_23.59.20.mat(3)'
+wb = load_workbook(filename=path2results, read_only=True)
 
-print(a[:8])
+ws = wb[wb.get_sheet_names()[0]]
+i=0
+print(ws.rows)
+exit(0)
+for row in ws.rows:
+    for cell in row:
+        print(cell.value)
+    i+=1
+    if(i==10):
+        break

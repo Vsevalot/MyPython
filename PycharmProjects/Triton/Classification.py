@@ -141,12 +141,50 @@ def stageDetector(matFile:str,reportList:list): # search for the closest time to
             break
     return None # if none report in reportList much return None
 
+def groupStatistic(res:dict):
+    histValue=[]
+    columns=list(res.keys())
+    parts=[] # To calculate a percentage of processed files for each column
+    for column in range(len(columns)):
+        histValue.append([])
+        for matFile in res[columns[column]]:
+            histValue[column].append(stageDetector(matFile,reportsList)) # returns None if can't find time from a mat file
+        parts.append(int(100*(len(histValue[column])-histValue[column].count(None))/len(histValue[column])))
+        histValue[column] = [ int(v) for v in histValue[column] if v is not None]
+    stages = [-1,0,1,2,3,4,5,6,7]
+    histPer=[[100*column.count(i)/len(column) for i in stages] for column in histValue]
+    return histPer, parts
+
+def recSubPlotDet(plotNumber:int):
+    n=plotNumber
+    factors=[]
+    i=2
+    while(n!=1): # feed factors arr with factors 18 = [2,3,3]
+       if n%i==0:
+           factors.append(i)
+           n/=i
+       else:
+           i+=1
+
+    if len(factors)==1: # we need a rectangular subplot, so 3*1 is not enough -> 2*2
+        return recSubPlotDet(plotNumber+1)
+    if len(factors)>2:
+        i=0
+        while(len(factors)!=2):
+            factors[i%2]*=factors[-1]
+            i+=1
+            factors.pop(-1)
+    if(factors[1]<factors[0]): # if width < high swap them
+        return factors[1], factors[0]
+    return factors[0], factors[1]
+
+
 if __name__ == "__main__":
     '''''''''''''''''
     # Preparing files
     '''''''''''''''''
     try:
-        path2results = "E:\\test\\results.csv"
+        path2results = "E:\\test\\results4.csv"
         results = results2dict(readCSV(path2results))
         path2reports = "E:\\test\\Reports\complete"
         reportsList = [os.path.join(path2reports, f) for f in os.listdir(path2reports) if
@@ -156,8 +194,7 @@ if __name__ == "__main__":
         # Results file window
         '''''''''''''''''
         Tk().withdraw()
-        path2results = askopenfilename(initialdir="C:\\",
-                                    filetype=(("CSV File", "*.csv"), ("All Files","*.*")),
+        path2results = askopenfilename(filetype=(("CSV File", "*.csv"), ("All Files","*.*")),
                                     title="Choose a file with results of classification")
         if (path2results == ''):
             exit(0)
@@ -168,8 +205,7 @@ if __name__ == "__main__":
         # Reports folder window
         '''''''''''''''''
         Tk().withdraw()
-        path2reports = askdirectory(initialdir="C:\\",
-                                    title="Choose a folder which contain reports")
+        path2reports = askdirectory(title="Choose a folder which contain reports")
         if (path2reports == ''):
             exit(0)
         reportsList = [os.path.join(path2reports, f) for f in os.listdir(path2reports) if
@@ -178,50 +214,41 @@ if __name__ == "__main__":
     '''''''''''''''''
     # Data collection
     '''''''''''''''''
-    histValue=[]
+    histPer, parts=groupStatistic(results)
     columns=list(results.keys())
-    parts=[] # To calculate a percentage of processed files for each column
-    for column in range(len(columns)):
-        histValue.append([])
-        n=0
-        p=0
-        for matFile in results[columns[column]]:
-            histValue[column].append(stageDetector(matFile,reportsList)) # returns None if can't find time from a mat file
-        parts.append(int(100*(len(histValue[column])-histValue[column].count(None))/len(histValue[column])))
-
-        histValue[column] = [ int(v) for v in histValue[column] if v is not None]
-
-    stages = [-1,0,1,2,3,4,5,6,7]
-    histPer=[[100*column.count(i)/len(column) for i in stages] for column in histValue]
-    print(histPer)
-
+    stages = [-1, 0, 1, 2, 3, 4, 5, 6, 7]
 
     '''''''''''''''''
     # Plotting
     '''''''''''''''''
-    x.rcParams.update({'font.size': 22})
+
+    high, width=recSubPlotDet(len(columns)+1)
+
+
+    x.rcParams.update({'font.size': 20})
     plt.figure(figsize=(40.0, 25.0))
     for column in range(len(columns)):
-        a=plt.subplot(2,2,column+1)
+        a=plt.subplot(high,width,column+1)
         plt.bar(stages,histPer[column],align='center')
         plt.title("Anesthesia stage distribution for the group "+str(column+1))
-        #plt.xlabel("Stage")
         plt.ylabel("Percentage")
-        names = ["Artifacts", "Wakefulness", "First stage", "Second stage", "Third stage","Fourth stage", "Fifth stage","sixth stage","Seventh stage"]
-        a.set_xticks(stages)
+        names = ["Artifacts", "Wakefulness", "First stage", "Second stage", "Third stage","Fourth stage", "Fifth stage",
+                 "sixth stage","Seventh stage"]
+        a.set_xticks([tick-0.3 for tick in stages])
         a.set_xticklabels(names)
-        plt.axis([-1.5, 5.5, 0,100])
+        plt.xticks(rotation=50)
+        plt.axis([-0.5, 7.5, 0,100])
 
-    a=plt.subplot(2, 2, 4)
-    plt.bar([1,2,3],parts, color='g',align='center')
+
+    a=plt.subplot(high, width, high*width)
+    plt.bar([v+1 for v in range(len(columns))],parts, color='g',align='center')
     plt.title("Percentage of use mat files for the each group")
-    plt.xlabel("Group (column)")
     plt.ylabel("Percentage")
-    plt.axis([0.5, 3.5, 0, 100])
-    #names = ["First column", "Second column","Third column"]
-    #a.set_xticks([ 1, 2, 3])
-    #a.set_xticklabels(names)
-    #plt.show()
+    plt.axis([0.5, 4.5, 0, 100])
+    names = ["First group", "Second group","Third group", "Fourth group"]
+    a.set_xticks([v+1 for v in range(len(columns))])
+    a.set_xticklabels(names)
+    plt.subplots_adjust(hspace=0.3)
     plt.savefig("E:\\test\\PercentageHist.jpg", dpi=300)
 
 

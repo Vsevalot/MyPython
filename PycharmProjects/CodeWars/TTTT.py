@@ -1,2 +1,2 @@
-a="12345"
-print(a[:3])
+a=";"
+print(a.split(';'))
