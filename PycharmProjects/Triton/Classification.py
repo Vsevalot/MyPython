@@ -83,6 +83,21 @@ def readCSV(path2csv:str) -> list: # read any CSV file and return it like list o
             data=[[value[i] for value in lines] for i in range(len(lines[0]))] # transpose the list to make columns elements of the list
             return data
 
+def readXLSX(path2xlsx:str)->list:
+    from openpyxl import load_workbook
+    wb = load_workbook(filename=path2xlsx, read_only=True)
+    ws = wb[wb.get_sheet_names()[0]]
+    lines = []
+    for row in ws.rows:
+        line = []
+        for cell in row:
+            if cell.value is not None:
+                line.append(str(cell.value))
+            else:
+                line.append('')
+        lines.append(line)
+    return [[line[i] for line in lines if line[i] is not None] for i in range(len(lines[0]))]
+
 def results2dict(results:list) -> dict: # convert values from "'abc'\n" to "abc"
     for i in range(len(results)):
         for k in range(len(results[i])):
@@ -178,15 +193,14 @@ def recSubPlotDet(plotNumber:int):
         return factors[1], factors[0]
     return factors[0], factors[1]
 
-
 if __name__ == "__main__":
     '''''''''''''''''
     # Preparing files
     '''''''''''''''''
     try:
-        path2results = "E:\\test\\results4.csv"
-        results = results2dict(readCSV(path2results))
-        path2reports = "E:\\test\\Reports\complete"
+        path2results = "E:\\te1st\\5_data12_20171019_101000.xlsx"
+        results = results2dict(readXLSX(path2results))
+        path2reports = "E:\\test\\Reports\\complete"
         reportsList = [os.path.join(path2reports, f) for f in os.listdir(path2reports) if
                        os.path.isfile(os.path.join(path2reports, f))]
     except:
@@ -194,11 +208,14 @@ if __name__ == "__main__":
         # Results file window
         '''''''''''''''''
         Tk().withdraw()
-        path2results = askopenfilename(filetype=(("CSV File", "*.csv"), ("All Files","*.*")),
+        path2results = askopenfilename(filetype=(("XLSX File", "*.xlsx"), ("CSV File", "*.csv")),
                                     title="Choose a file with results of classification")
         if (path2results == ''):
             exit(0)
-        results = results2dict(readCSV(path2results))
+        if (path2results[-4:]=="xlsx"):
+            results = results2dict(readXLSX(path2results))
+        if (path2results[-3:]=="csv"):
+            results = results2dict(readCSV(path2results))
 
 
         '''''''''''''''''
@@ -223,7 +240,6 @@ if __name__ == "__main__":
     '''''''''''''''''
 
     high, width=recSubPlotDet(len(columns)+1)
-
 
     x.rcParams.update({'font.size': 20})
     plt.figure(figsize=(40.0, 25.0))
