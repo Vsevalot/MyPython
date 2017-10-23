@@ -113,7 +113,7 @@ def results2dict(results:list) -> dict: # convert values from "'abc'\n" to "abc"
                 break
     return {"Column_"+str(i+1):results[i] for i in range(len(results))}
 
-def stageDetector(matFile:str,reportList:list): # search for the closest time to the MatFile in all reports and return stage in this time
+def stageDetector(matFile:str,reportList:list,fiveMinutes:bool=None): # search for the closest time to the MatFile in all reports and return stage in this time
     matDate, matTime = matName2Time(matFile)
     dayReports=[report for report in reportsList if  reportName2Date(report)==matDate ] # compare date in mat and csv files
     def chronoChecker(times:list, report:str)->bool: # Check the correct order in the given time list
@@ -144,31 +144,52 @@ def stageDetector(matFile:str,reportList:list): # search for the closest time to
             rTimes.append(reportTime(csv[0][i], report))
 
         if(chronoChecker(rTimes, report)): # If all times if file are in correct order
+            if fiveMinutes:
+                for i in range(len(rTimes)):
+                    if rTimes[i] >= matTime:  # if found time which is later or equal than matFile
+                        stages = {str(stage):0 for stage in [-1, 0, 1, 2, 3, 4, 5, 6, 7]}
+                        stages[csv[1][i]]+=timeDif(rTimes[i],matTime)
+                        k=i+1
+                        if (k == len(rTimes)):
+                            return csv[1][i]
+                        while (timeDif(rTimes[k],matTime)<300):
+                            stages[csv[1][k]]+=timeDif(rTimes[k],rTimes[k-1])
+                            k+=1
+                            if k == len(rTimes):
+                                k-=1
+                                break
+                        if sum([stages[stage] for stage in stages])<300:
+                            stages[csv[1][k]]+=300-timeDif(rTimes[k-1],matTime)
+                        return max(stages, key=stages.get)
+
             for i in range(len(rTimes)):
                 if rTimes[i]>=matTime: # if found time which is later or equal than matFile
                     if (timeDif(rTimes[i],matTime)+30 <= timeDif(matTime, rTimes[i-1])) : # +30 seconds because the algorithm has a delay
-                        #print(matTime, rTimes[i],csv[1][i])
                         return csv[1][i] # if i line is closer to the matTime return i line
                     else:
-                        #print(matTime, rTimes[i-1], csv[1][i-1])
                         return csv[1][i-1] # else return previous line because it's closer to the matTime
         else:
             break
     return None # if none report in reportList much return None
 
-def groupStatistic(res:dict):
+def groupStatistic(res:dict): # take results of classification as dictionary and return list of percentages and list of percentages of used matFiles
     histValue=[]
     columns=list(res.keys())
     parts=[] # To calculate a percentage of processed files for each column
+    thirdStaged=[]
     for column in range(len(columns)):
         histValue.append([])
         for matFile in res[columns[column]]:
             histValue[column].append(stageDetector(matFile,reportsList)) # returns None if can't find time from a mat file
+            if (column==0) and histValue[0][-1]=='3':
+                thirdStaged.append(matFile)
         parts.append(int(100*(len(histValue[column])-histValue[column].count(None))/len(histValue[column])))
-        histValue[column] = [ int(v) for v in histValue[column] if v is not None]
+        histValue[column] = [ int(v) for v in histValue[column] if (v is not None) and (v != "-1") ]
     stages = [-1,0,1,2,3,4,5,6,7]
-    histPer=[[100*column.count(i)/len(column) for i in stages] for column in histValue]
-    return histPer, parts
+    files=sum(histValue,[])
+    files=[round(100*files.count(i)/len(files),2) for i in stages]
+    histPer=[[100*column.count(i)/sum([len(column) for column in histValue]) for i in stages] for column in histValue]
+    return histPer, parts, files, thirdStaged
 
 def recSubPlotDet(plotNumber:int):
     n=plotNumber
@@ -198,7 +219,7 @@ if __name__ == "__main__":
     # Preparing files
     '''''''''''''''''
     try:
-        path2results = "E:\\te1st\\5_data12_20171019_101000.xlsx"
+        path2results = "Z:\\Tetervak\\5_data14_30sec_20171023_120900.xlsx"
         results = results2dict(readXLSX(path2results))
         path2reports = "E:\\test\\Reports\\complete"
         reportsList = [os.path.join(path2reports, f) for f in os.listdir(path2reports) if
@@ -231,9 +252,15 @@ if __name__ == "__main__":
     '''''''''''''''''
     # Data collection
     '''''''''''''''''
-    histPer, parts=groupStatistic(results)
+    histPer, parts, files, thirds=groupStatistic(results)
     columns=list(results.keys())
     stages = [-1, 0, 1, 2, 3, 4, 5, 6, 7]
+
+    with open("E:\\test\\"+"Third stage in the first group.csv",'w') as file:
+        for matFile in thirds:
+            file.write(matFile+"\n")
+        file.close()
+
 
     '''''''''''''''''
     # Plotting
@@ -243,27 +270,27 @@ if __name__ == "__main__":
 
     x.rcParams.update({'font.size': 20})
     plt.figure(figsize=(40.0, 25.0))
+    names = ["Artifacts", "Wakefulness", "First stage", "Second stage", "Third stage", "Fourth stage", "Fifth stage",
+             "Sixth stage", "Seventh stage"]
     for column in range(len(columns)):
         a=plt.subplot(high,width,column+1)
         plt.bar(stages,histPer[column],align='center')
         plt.title("Anesthesia stage distribution for the group "+str(column+1))
         plt.ylabel("Percentage")
-        names = ["Artifacts", "Wakefulness", "First stage", "Second stage", "Third stage","Fourth stage", "Fifth stage",
-                 "sixth stage","Seventh stage"]
         a.set_xticks([tick-0.3 for tick in stages])
         a.set_xticklabels(names)
         plt.xticks(rotation=50)
-        plt.axis([-0.5, 7.5, 0,100])
+        plt.axis([ -0.5, 7.5, 0,100])
 
 
     a=plt.subplot(high, width, high*width)
-    plt.bar([v+1 for v in range(len(columns))],parts, color='g',align='center')
-    plt.title("Percentage of use mat files for the each group")
+    plt.bar(stages,files, color='g',align='center')
+    plt.title("Total number of stages")
     plt.ylabel("Percentage")
-    plt.axis([0.5, 4.5, 0, 100])
-    names = ["First group", "Second group","Third group", "Fourth group"]
-    a.set_xticks([v+1 for v in range(len(columns))])
+    a.set_xticks([tick - 0.3 for tick in stages])
     a.set_xticklabels(names)
+    plt.xticks(rotation=50)
+    plt.axis([-0.5, 7.5, 0, 100])
     plt.subplots_adjust(hspace=0.3)
     plt.savefig("E:\\test\\PercentageHist.jpg", dpi=300)
 

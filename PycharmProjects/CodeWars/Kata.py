@@ -1,10 +1,11 @@
-class RomanNumerals():
-    roman={"MDCLXVI"[i]:[1000,500,100,50,10,5,1][i] for i in range(len("MDCLXVI"))}
+def permutations(string:str)->list:
+    if len(string) == 1:
+        return [string]
+    if len(string)==2:
+        return list({string,string[1]+string[0]})
+    return list(set(sum([[ string[i] + combination for combination in permutations(string[:i]+string[i+1:])] for i in range(len(string))],[])))
 
-    def to_roman(self,arNum:int)->str:
-        currentRoman={char:0 for char in "MDCLXVI"}
 
-        while(arNum!=0):
-            for i in range(len("MDCLXVI")):
-                if RomanNumerals.roman["MDCLXVI"[i]]>arNum:
+a="11"
 
+print(permutations(a))
