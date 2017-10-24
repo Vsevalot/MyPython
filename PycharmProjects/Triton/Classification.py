@@ -176,20 +176,17 @@ def groupStatistic(res:dict): # take results of classification as dictionary and
     histValue=[]
     columns=list(res.keys())
     parts=[] # To calculate a percentage of processed files for each column
-    thirdStaged=[]
     for column in range(len(columns)):
         histValue.append([])
         for matFile in res[columns[column]]:
-            histValue[column].append(stageDetector(matFile,reportsList)) # returns None if can't find time from a mat file
-            if (column==0) and histValue[0][-1]=='3':
-                thirdStaged.append(matFile)
+            histValue[column].append(stageDetector(matFile,reportsList,True)) # returns None if can't find time from a mat file
         parts.append(int(100*(len(histValue[column])-histValue[column].count(None))/len(histValue[column])))
         histValue[column] = [ int(v) for v in histValue[column] if (v is not None) and (v != "-1") ]
     stages = [-1,0,1,2,3,4,5,6,7]
     files=sum(histValue,[])
     files=[round(100*files.count(i)/len(files),2) for i in stages]
     histPer=[[100*column.count(i)/sum([len(column) for column in histValue]) for i in stages] for column in histValue]
-    return histPer, parts, files, thirdStaged
+    return histPer, parts, files
 
 def recSubPlotDet(plotNumber:int):
     n=plotNumber
@@ -214,12 +211,23 @@ def recSubPlotDet(plotNumber:int):
         return factors[1], factors[0]
     return factors[0], factors[1]
 
+def fileName(path2file:str)->str:
+    for i in range(len(path2file)-1,-1,-1):
+        if path2file[i]=='.':
+            path2file=path2file[:i]
+            break
+    for i in range(len(path2file)-1,-1,-1):
+        if path2file[i]=='\\':
+            path2file=path2file[i+1:]
+            break
+    return path2file
+
 if __name__ == "__main__":
     '''''''''''''''''
     # Preparing files
     '''''''''''''''''
     try:
-        path2results = "Z:\\Tetervak\\5_data14_30sec_20171023_120900.xlsx"
+        path2results = "Z:\\Tetervak\\5_data14_2_5min_20171024_120300.xlsx"
         results = results2dict(readXLSX(path2results))
         path2reports = "E:\\test\\Reports\\complete"
         reportsList = [os.path.join(path2reports, f) for f in os.listdir(path2reports) if
@@ -252,14 +260,10 @@ if __name__ == "__main__":
     '''''''''''''''''
     # Data collection
     '''''''''''''''''
-    histPer, parts, files, thirds=groupStatistic(results)
+    histPer, parts, files=groupStatistic(results)
     columns=list(results.keys())
     stages = [-1, 0, 1, 2, 3, 4, 5, 6, 7]
 
-    with open("E:\\test\\"+"Third stage in the first group.csv",'w') as file:
-        for matFile in thirds:
-            file.write(matFile+"\n")
-        file.close()
 
 
     '''''''''''''''''
@@ -292,6 +296,6 @@ if __name__ == "__main__":
     plt.xticks(rotation=50)
     plt.axis([-0.5, 7.5, 0, 100])
     plt.subplots_adjust(hspace=0.3)
-    plt.savefig("E:\\test\\PercentageHist.jpg", dpi=300)
+    plt.savefig("Z:\\Tetervak\\Analysed\\"+fileName(path2results)+"_HIST.jpg", dpi=300)
 
 
