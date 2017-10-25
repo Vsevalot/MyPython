@@ -175,18 +175,33 @@ def stageDetector(matFile:str,reportList:list,fiveMinutes:bool=None): # search f
 def groupStatistic(res:dict): # take results of classification as dictionary and return list of percentages and list of percentages of used matFiles
     histValue=[]
     columns=list(res.keys())
+    def stageLen():
+        for column in res:
+            for matName in res[column]:
+                if matName[-2:-1]!='0':
+                    return False
+        return True
+    fiveMinutesFragments=stageLen()
     parts=[] # To calculate a percentage of processed files for each column
+    strangeFiles=[]
     for column in range(len(columns)):
         histValue.append([])
         for matFile in res[columns[column]]:
-            histValue[column].append(stageDetector(matFile,reportsList,True)) # returns None if can't find time from a mat file
+            histValue[column].append(stageDetector(matFile,reportsList,fiveMinutesFragments)) # returns None if can't find time from a mat file
+            if (histValue[0][-1]=='0'):
+                strangeFiles.append(matFile)
         parts.append(int(100*(len(histValue[column])-histValue[column].count(None))/len(histValue[column])))
         histValue[column] = [ int(v) for v in histValue[column] if (v is not None) and (v != "-1") ]
-    stages = [-1,0,1,2,3,4,5,6,7]
+    stages=[]
+    for column in histValue:
+        for stage in column:
+            if stage not in stages:
+                stages.append(stage)
+    stages=sorted(stages)
     files=sum(histValue,[])
     files=[round(100*files.count(i)/len(files),2) for i in stages]
-    histPer=[[100*column.count(i)/sum([len(column) for column in histValue]) for i in stages] for column in histValue]
-    return histPer, parts, files
+    histPer=[[round(100*column.count(i)/sum([len(column) for column in histValue]),2) for i in stages] for column in histValue]
+    return histPer, parts, files, strangeFiles, stages
 
 def recSubPlotDet(plotNumber:int):
     n=plotNumber
@@ -227,7 +242,7 @@ if __name__ == "__main__":
     # Preparing files
     '''''''''''''''''
     try:
-        path2results = "Z:\\Tetervak\\5_data14_2_5min_20171024_120300.xlsx"
+        path2results = "Z:\\Tetervak\\7_data14_2_30sec_20171024_155600.xlsx"
         results = results2dict(readXLSX(path2results))
         path2reports = "E:\\test\\Reports\\complete"
         reportsList = [os.path.join(path2reports, f) for f in os.listdir(path2reports) if
@@ -260,10 +275,13 @@ if __name__ == "__main__":
     '''''''''''''''''
     # Data collection
     '''''''''''''''''
-    histPer, parts, files=groupStatistic(results)
+    histPer, parts, files, wakefulness, stages=groupStatistic(results)
     columns=list(results.keys())
-    stages = [-1, 0, 1, 2, 3, 4, 5, 6, 7]
 
+    with open("Z:\\Tetervak\\Analysed\\new First Group Wakefulness.csv",'w') as file:
+        for matFile in wakefulness:
+            file.write(matFile+'\n')
+        file.close()
 
 
     '''''''''''''''''
@@ -275,8 +293,9 @@ if __name__ == "__main__":
     x.rcParams.update({'font.size': 20})
     plt.figure(figsize=(40.0, 25.0))
     names = ["Artifacts", "Wakefulness", "First stage", "Second stage", "Third stage", "Fourth stage", "Fifth stage",
-             "Sixth stage", "Seventh stage"]
+             "Sixth stage", "Seventh stage"][stages[0]+1:]
     for column in range(len(columns)):
+        labels = [str(histPer[column][i]) for i in range(len(histPer[column]))]
         a=plt.subplot(high,width,column+1)
         plt.bar(stages,histPer[column],align='center')
         plt.title("Anesthesia stage distribution for the group "+str(column+1))
@@ -284,7 +303,9 @@ if __name__ == "__main__":
         a.set_xticks([tick-0.3 for tick in stages])
         a.set_xticklabels(names)
         plt.xticks(rotation=50)
-        plt.axis([ -0.5, 7.5, 0,100])
+        plt.axis([ stages[0]-0.5, stages[-1]+0.5, 0,100])
+        for k in range(len(stages)):
+            a.text(stages[k]-0.35, histPer[column][k] + 0.35, str(histPer[column][k]), color='blue')
 
 
     a=plt.subplot(high, width, high*width)
@@ -294,8 +315,8 @@ if __name__ == "__main__":
     a.set_xticks([tick - 0.3 for tick in stages])
     a.set_xticklabels(names)
     plt.xticks(rotation=50)
-    plt.axis([-0.5, 7.5, 0, 100])
+    plt.axis([stages[0]-0.5, stages[-1]+0.5, 0, 100])
     plt.subplots_adjust(hspace=0.3)
-    plt.savefig("Z:\\Tetervak\\Analysed\\"+fileName(path2results)+"_HIST.jpg", dpi=300)
+    plt.savefig("Z:\\Tetervak\\Analysed\\new_"+fileName(path2results)+"_HIST.jpg", dpi=300)
 
 
