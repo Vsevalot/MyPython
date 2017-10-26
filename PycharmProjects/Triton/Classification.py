@@ -172,7 +172,7 @@ def stageDetector(matFile:str,reportList:list,fiveMinutes:bool=None): # search f
             break
     return None # if none report in reportList much return None
 
-def groupStatistic(res:dict): # take results of classification as dictionary and return list of percentages and list of percentages of used matFiles
+def groupStatistic(res:dict,reportsList): # take results of classification as dictionary and return list of percentages and list of percentages of used matFiles
     histValue=[]
     columns=list(res.keys())
     def stageLen():
@@ -275,12 +275,22 @@ if __name__ == "__main__":
     '''''''''''''''''
     # Data collection
     '''''''''''''''''
-    histPer, parts, files, wakefulness, stages=groupStatistic(results)
+    histPer, parts, files, wakefulness, stages=groupStatistic(results,reportsList)
     columns=list(results.keys())
 
-    with open("Z:\\Tetervak\\Analysed\\new First Group Wakefulness.csv",'w') as file:
-        for matFile in wakefulness:
-            file.write(matFile+'\n')
+    csv=[[]]
+    for matFile in range(len(wakefulness)):
+        if wakefulness[matFile][:8]!=wakefulness[matFile-1][:8]:
+            csv.append([])
+        csv[-1].append(wakefulness[matFile])
+    if csv[0]==[]:
+        csv=csv[1:]
+
+    with open("Z:\\Tetervak\\Analysed\\First Group Wakefulness.csv",'w') as file:
+        for day in csv:
+            for matFile in day:
+                file.write(matFile+';')
+            file.write('\n')
         file.close()
 
 
