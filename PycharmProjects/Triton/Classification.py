@@ -188,7 +188,7 @@ def groupStatistic(res:dict,reportsList): # take results of classification as di
         histValue.append([])
         for matFile in res[columns[column]]:
             histValue[column].append(stageDetector(matFile,reportsList,fiveMinutesFragments)) # returns None if can't find time from a mat file
-            if (histValue[0][-1]=='0'):
+            if (column==6) and (histValue[6][-1]=='0'):
                 strangeFiles.append(matFile)
         parts.append(int(100*(len(histValue[column])-histValue[column].count(None))/len(histValue[column])))
         histValue[column] = [ int(v) for v in histValue[column] if (v is not None) and (v != "-1") ]
@@ -237,13 +237,34 @@ def fileName(path2file:str)->str:
             break
     return path2file
 
+def write2csv(some2Dlist:list, path2save:str):
+    if type(some2Dlist[0])!=list:
+        print("You should give a list of lists to write it for csv")
+        exit(0)
+    try:
+        with open(path2save, 'w') as file:
+            for k in range(max([len(l) for l in some2Dlist])):
+                line=''
+                for column in some2Dlist:
+                    if k>=len(column):
+                        line+=';'
+                    else:
+                        line+=column[k]+';'
+                file.write(line[:-1]+'\n')
+            file.close()
+        print("Saved : "+path2save)
+        return True
+    except:
+        return False
+
+
 if __name__ == "__main__":
     '''''''''''''''''
     # Preparing files
     '''''''''''''''''
     try:
-        path2results = "Z:\\Tetervak\\7_data14_2_30sec_20171024_155600.xlsx"
-        results = results2dict(readXLSX(path2results))
+        path2results = "Z:\\Tetervak\\9_data14_3_30sec_all_20171027_172800.csv"
+        results = results2dict(readCSV(path2results))
         path2reports = "E:\\test\\Reports\\complete"
         reportsList = [os.path.join(path2reports, f) for f in os.listdir(path2reports) if
                        os.path.isfile(os.path.join(path2reports, f))]
@@ -286,12 +307,7 @@ if __name__ == "__main__":
     if csv[0]==[]:
         csv=csv[1:]
 
-    with open("Z:\\Tetervak\\Analysed\\First Group Wakefulness.csv",'w') as file:
-        for day in csv:
-            for matFile in day:
-                file.write(matFile+';')
-            file.write('\n')
-        file.close()
+    write2csv(csv,"Z:\\Tetervak\\Analysed\\"+fileName(path2results)+".csv")
 
 
     '''''''''''''''''
@@ -308,7 +324,7 @@ if __name__ == "__main__":
         labels = [str(histPer[column][i]) for i in range(len(histPer[column]))]
         a=plt.subplot(high,width,column+1)
         plt.bar(stages,histPer[column],align='center')
-        plt.title("Anesthesia stage distribution for the group "+str(column+1))
+        plt.title("Group "+str(column+1))
         plt.ylabel("Percentage")
         a.set_xticks([tick-0.3 for tick in stages])
         a.set_xticklabels(names)
@@ -327,6 +343,6 @@ if __name__ == "__main__":
     plt.xticks(rotation=50)
     plt.axis([stages[0]-0.5, stages[-1]+0.5, 0, 100])
     plt.subplots_adjust(hspace=0.3)
-    plt.savefig("Z:\\Tetervak\\Analysed\\new_"+fileName(path2results)+"_HIST.jpg", dpi=300)
+    plt.savefig("Z:\\Tetervak\\Analysed\\"+fileName(path2results)+"_HIST.jpg", dpi=300)
 
 
