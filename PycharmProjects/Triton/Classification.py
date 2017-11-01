@@ -7,10 +7,9 @@ from tkinter.filedialog import askopenfilename
 from tkinter.filedialog import askdirectory
 
 def matName2Time(matName: str) -> [datetime.date,datetime.time]: # convert Mat file's name to date and time
-    opening=matName.index('(')
-    closing=matName.index(')')
-    timeDelta=30*int(matName[opening+1:closing])
-    matName=matName[:opening]
+    before=matName.split('(')
+    timeDelta=30*int(before[1].split(')')[0])
+    matName=before[0]
     t=datetime.timedelta(hours=int(matName[-12:-10]), minutes=int(matName[-9:-7]), seconds=int(matName[-6:-4])+timeDelta)
     d=datetime.date(int(matName[-21:-17]),int(matName[-17:-15]), int(matName[-15:-13]))+t # if t has more than 23:59:59 so one day will be added
     m,s=divmod(t.seconds, 60)
@@ -62,7 +61,7 @@ def timeDif(time1, time2 ) -> int: # calculate difference between to times in se
 
 def readCSV(path2csv:str) -> list: # read any CSV file and return it like list of columns
     with open(path2csv, 'r') as file:
-        lines=[line.split(';') for line in file.readlines()] # reading all lines in the file with rows as elements of the list
+        lines=[[v for v in line.split(';') if v!='\n'] for line in file.readlines()] # reading all lines in the file with rows as elements of the list
         emptyLine=True
         while(emptyLine): # remove all empty lines
             for value in lines[-1]:
@@ -81,7 +80,10 @@ def readCSV(path2csv:str) -> list: # read any CSV file and return it like list o
                 exit(1)
         if(squareCSV):
             data=[[value[i] for value in lines] for i in range(len(lines[0]))] # transpose the list to make columns elements of the list
-            return data
+            for v in data[-1]:
+                if v!='\t':
+                    return data
+            return data[:-1]
 
 def readXLSX(path2xlsx:str)->list:
     from openpyxl import load_workbook
@@ -101,13 +103,15 @@ def readXLSX(path2xlsx:str)->list:
 def results2dict(results:list) -> dict: # convert values from "'abc'\n" to "abc"
     for i in range(len(results)):
         for k in range(len(results[i])):
-            if(results[i][k]!='' and results[i][k]!='\n'):
+            if(results[i][k]!='' and results[i][k]!='\n' and results[i][k]!='\t'):
                 if(results[i][k][0]=="'"):
                     results[i][k]=results[i][k][1:]
                 if(results[i][k][-1]=='\n'):
                     results[i][k] = results[i][k][:-1]
                 if(results[i][k][-1]=="'"):
                     results[i][k] = results[i][k][:-1]
+                if (results[i][k][0] == '\t'):
+                    results[i][k] = results[i][k][1:]
             else:
                 results[i]=results[i][:k]
                 break
@@ -188,10 +192,13 @@ def groupStatistic(res:dict,reportsList): # take results of classification as di
         histValue.append([])
         for matFile in res[columns[column]]:
             histValue[column].append(stageDetector(matFile,reportsList,fiveMinutesFragments)) # returns None if can't find time from a mat file
-            if (column==6) and (histValue[6][-1]=='0'):
+            if (column==18) and (histValue[18][-1]=='2'):
                 strangeFiles.append(matFile)
-        parts.append(int(100*(len(histValue[column])-histValue[column].count(None))/len(histValue[column])))
-        histValue[column] = [ int(v) for v in histValue[column] if (v is not None) and (v != "-1") ]
+        if (histValue[column]!=[]):
+            parts.append(int(100*(len(histValue[column])-histValue[column].count(None))/len(histValue[column])))
+            histValue[column] = [ int(v) for v in histValue[column] if (v is not None) and (v != "4") and (v != "5") and (v != "6") and (v != "7")] # and (v != "-1")
+        else:
+            parts.append(0)
     stages=[]
     for column in histValue:
         for stage in column:
@@ -263,8 +270,11 @@ if __name__ == "__main__":
     # Preparing files
     '''''''''''''''''
     try:
-        path2results = "Z:\\Tetervak\\9_data14_3_30sec_all_20171027_172800.csv"
-        results = results2dict(readCSV(path2results))
+        path2results = "Z:\\Tetervak\\21_data14_4_30sec_20171031_171400.csv"
+        if (path2results[-4:]=="xlsx"):
+            results = results2dict(readXLSX(path2results))
+        if (path2results[-3:]=="csv"):
+            results = results2dict(readCSV(path2results))
         path2reports = "E:\\test\\Reports\\complete"
         reportsList = [os.path.join(path2reports, f) for f in os.listdir(path2reports) if
                        os.path.isfile(os.path.join(path2reports, f))]
@@ -307,8 +317,8 @@ if __name__ == "__main__":
     if csv[0]==[]:
         csv=csv[1:]
 
-    write2csv(csv,"Z:\\Tetervak\\Analysed\\"+fileName(path2results)+".csv")
-
+    write2csv(csv,"Z:\\Tetervak\\Analysed\\"+"2 in 19 group "+fileName(path2results)+".csv")
+    exit(0)
 
     '''''''''''''''''
     # Plotting
@@ -316,33 +326,70 @@ if __name__ == "__main__":
 
     high, width=recSubPlotDet(len(columns)+1)
 
-    x.rcParams.update({'font.size': 20})
+    x.rcParams.update({'font.size': 14})
     plt.figure(figsize=(40.0, 25.0))
     names = ["Artifacts", "Wakefulness", "First stage", "Second stage", "Third stage", "Fourth stage", "Fifth stage",
-             "Sixth stage", "Seventh stage"][stages[0]+1:]
+             "Sixth stage", "Seventh stage"]
     for column in range(len(columns)):
         labels = [str(histPer[column][i]) for i in range(len(histPer[column]))]
         a=plt.subplot(high,width,column+1)
         plt.bar(stages,histPer[column],align='center')
         plt.title("Group "+str(column+1))
         plt.ylabel("Percentage")
-        a.set_xticks([tick-0.3 for tick in stages])
-        a.set_xticklabels(names)
-        plt.xticks(rotation=50)
-        plt.axis([ stages[0]-0.5, stages[-1]+0.5, 0,100])
+        a.set_xticks([tick-0.0 for tick in stages])
+        a.set_xticklabels([str(s) for s in stages])
+        #plt.xticks(rotation=50)
+        plt.axis([ stages[0]-0.5, 3+0.5, 0,100])
         for k in range(len(stages)):
-            a.text(stages[k]-0.35, histPer[column][k] + 0.35, str(histPer[column][k]), color='blue')
+            a.text(stages[k]-0.40, histPer[column][k] + 0.35, str(histPer[column][k]), color='blue')
 
 
     a=plt.subplot(high, width, high*width)
     plt.bar(stages,files, color='g',align='center')
     plt.title("Total number of stages")
     plt.ylabel("Percentage")
-    a.set_xticks([tick - 0.3 for tick in stages])
-    a.set_xticklabels(names)
-    plt.xticks(rotation=50)
+    a.set_xticks([tick - 0.0 for tick in stages])
+    a.set_xticklabels([str(s) for s in stages])
+    #plt.xticks(rotation=50)
     plt.axis([stages[0]-0.5, stages[-1]+0.5, 0, 100])
     plt.subplots_adjust(hspace=0.3)
     plt.savefig("Z:\\Tetervak\\Analysed\\"+fileName(path2results)+"_HIST.jpg", dpi=300)
 
 
+"""
+def sergey2lavrov(matName:str)->str:
+    return ''.join([v+'_' for v in matName.split('_')][:3])[:-1]+".mat("+str(int(int(matName.split('_')[-2])/30))+")'"
+
+def write2csv(some2Dlist:list, path2save:str):
+    if type(some2Dlist[0])!=list:
+        print("You should give a list of lists to write it for csv")
+        exit(0)
+    try:
+        with open(path2save, 'w') as file:
+            for k in range(max([len(l) for l in some2Dlist])):
+                line=''
+                for column in some2Dlist:
+                    if k>=len(column):
+                        line+=';'
+                    else:
+                        line+=column[k]+';'
+                file.write(line[:-1]+'\n')
+            file.close()
+        print("Saved : "+path2save)
+        return True
+    except:
+        return False
+
+
+path2results="Z:\\Tetervak\\9_data14_3_30sec_all_20171027_172800.xlsx"
+results=readXLSX(path2results)
+converted=[[] for column in results]
+for i, group in enumerate(results):
+    for fileName in group:
+        if len(fileName.split('_'))==6 or fileName=='':
+            continue
+        converted[i].append(sergey2lavrov(fileName))
+
+write2csv(converted, "Z:\\Tetervak\\Test.csv")
+
+"""
