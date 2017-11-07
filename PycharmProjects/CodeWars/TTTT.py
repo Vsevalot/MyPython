@@ -1,3 +1,2 @@
-a="folder_a"
-
-print(a[7:])
+a="Z:\\Tetervak\\123.csv"
+print(a[:-4])
