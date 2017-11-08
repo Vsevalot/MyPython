@@ -1,6 +1,6 @@
 import os
 import datetime
-import matplotlib as x
+import matplotlib
 import matplotlib.pyplot as plt
 from tkinter import Tk
 from tkinter.filedialog import askopenfilename
@@ -76,8 +76,8 @@ def matName2Time(matfile_name: str) -> [datetime.datetime, int]:  # convert Mat 
         start_second = int(time_delta.split('-')[0])  # if time delta looks like 100-120
         time_delta = int(time_delta.split('-')[1]) - int(time_delta.split('-')[0])  # time delta  = 120-100 = 20 seconds
     else:
+        start_second = 30 * int(time_delta)  # if in only 30 seconds parts
         time_delta = 30
-        start_second = time_delta * int(time_delta)  # if in only 30 seconds parts
 
     name = matfile_name.split('_')
     dt = datetime.datetime(int(name[1][0:4]), int(name[1][4:6]), int(name[1][6:8]), int(name[2][:2]), int(name[2][3:5]),
@@ -199,6 +199,8 @@ class Report(object):  # a list of records, with name, date and ketamine drugs
 
 
 STAGES = [-1, 0, 1, 2, 3, 4, 5, 6, 7]
+STAGE_NAMES = ["Artifacts", "Wakefulness", "First stage", "Second stage", "Third stage", "Fourth stage", "Fifth stage",
+         "Sixth stage", "Seventh stage"]
 
 '''
 Finds stage for the matfile in the reports. If not found returns EEG_Fragment with None stage
@@ -212,23 +214,22 @@ def getStage(matfile: str, reports: list):
         if (report.records[0].time > eeg_time) or (report.records[-1].time < eeg_time):
             continue
 
-        for i in range(len(report.records)):
-            record_time = report.records[i].time
-            record_stage = report.records[i].stage
-            if record_time >= eeg_time:  # if found a record which time is later or equal than matfile's time
-                stages = {stage: 0 for stage in STAGES}
-                stages[record_stage] += (record_time - eeg_time).seconds
-                k = i + 1
-                if (k == len(report.records)):
-                    return EEG_Fragment(matfile, report.name, record_stage, report.ketamine)
-                while ((report.records[k].time - eeg_time).seconds < time_delta):
-                    stages[report.records[k].stage] += (report.records[k].time - report.records[k - 1].time).seconds
-                    k += 1
-                    if k == len(report.records):
-                        k -= 1
-                        break
-                if sum([stages[stage] for stage in stages]) < time_delta:
-                    stages[report.records[k].stage] += time_delta - (report.records[k - 1].time - eeg_time).seconds
+        time_dif = [abs((eeg_time.timestamp() - s.time.timestamp())) for s in report.records ]
+        closest = time_dif.index(min(time_dif))
+        stages = {stage: 0 for stage in STAGES}
+        i = closest
+        while (1):
+            stages[report.records[i].stage] += abs((eeg_time - report.records[i].time).seconds)
+            i+=1
+            if i == len(report.records):
+                if sum([stages[stage] for stage in stages]) > time_delta:
+                    stages[report.records[i-1].stage]-= abs((eeg_time - report.records[i-1].time).seconds)
+                    stages[report.records[i - 1].stage] += time_delta - sum([stages[stage] for stage in stages])
+                eeg_stage = max(stages, key=stages.get)
+                return EEG_Fragment(matfile, report.name, eeg_stage, report.ketamine)
+            if sum([stages[stage] for stage in stages]) > time_delta:
+                stages[report.records[i - 1].stage] -= abs((eeg_time - report.records[i - 1].time).seconds)
+                stages[report.records[i - 1].stage] += time_delta - sum([stages[stage] for stage in stages])
                 eeg_stage = max(stages, key=stages.get)
                 return EEG_Fragment(matfile, report.name, eeg_stage, report.ketamine)
     return EEG_Fragment(matfile)
@@ -299,6 +300,84 @@ def writeCSVforInterestedFiles(file_dict: dict, eeg: dict, save_path: str):
                 write2csv(csv, group + '_stage_' + str(stage))
 
 
+'''
+Calculates number of rows (high) and number of columns (width) of subplot for the best screen ratio 
+'''
+def recSubPlotDet(plotNumber: int):
+    n = plotNumber
+    factors = []
+    i = 2
+    while (n != 1):  # feed factors arr with factors 18 = [2,3,3]
+        if n % i == 0:
+            factors.append(i)
+            n /= i
+        else:
+            i += 1
+
+    if len(factors) == 1:  # we need a rectangular subplot, so 3*1 is not enough -> 2*2
+        return recSubPlotDet(plotNumber + 1)
+    if len(factors) > 2:
+        i = 0
+        while (len(factors) != 2):
+            factors[i % 2] *= factors[-1]
+            i += 1
+            factors.pop(-1)
+    if (factors[1] < factors[0]):  # if width < high swap them
+        return factors[1], factors[0]
+    return factors[0], factors[1]
+
+
+'''
+Plots histograms for each non empty group and save them to the result's folder
+'''
+def subPlotter(eeg: dict, stage_ignore: list):
+    local_stages = [stage for stage in STAGES if stage not in stage_ignore]
+    sum_of_fragments = sum([len([fragment for fragment in eeg[group] if (fragment.stage is not None) and
+                                 (fragment.stage not in stage_ignore)]) for group in eeg])
+    bar_values = {group: {stage: len([fragment.stage for fragment in eeg[group] if fragment.stage == stage]) for stage
+                          in local_stages} for group in eeg}
+    bar_per = {group: [round(100*bar_values[group][n]/sum_of_fragments, 2) for n in bar_values[group]] for group in bar_values
+               if bar_values[group]!={s: 0 for s in local_stages}}
+    all_stages = [round(sum([bar_values[group][stage] for group in bar_values])/sum_of_fragments,2) for stage in local_stages]
+
+
+    '''
+    Plotting
+    '''
+    high, width=recSubPlotDet(len(bar_values)+1)
+
+    matplotlib.rcParams.update({'font.size': 14})
+    plt.figure(figsize=(40.0, 25.0))
+    i=1
+    for group in bar_per:
+        sbplt=plt.subplot(high,width,i)
+        plt.bar(local_stages,bar_per[group],align='center')
+        plt.title(group)
+        plt.ylabel("Percentage")
+        sbplt.set_xticks([tick-0.0 for tick in local_stages])
+        sbplt.set_xticklabels([str(s) for s in local_stages])
+        #plt.xticks(rotation=50)
+        plt.axis([ local_stages[0]-0.5,  local_stages[-1]+0.5, 0,100])
+        for k in range(len(local_stages)):
+            sbplt.text(local_stages[k]-0.40, bar_per[group][k] + 0.35, str(bar_per[group][k]), color='blue')
+        i+=1
+
+    sbplt=plt.subplot(high, width, high*width)
+    plt.bar(local_stages,all_stages, color='g',align='center')
+    plt.title("Total number of stages")
+    plt.ylabel("Percentage")
+    sbplt.set_xticks([tick - 0.0 for tick in local_stages])
+    sbplt.set_xticklabels([str(s) for s in local_stages])
+    #plt.xticks(rotation=50)
+    plt.axis([local_stages[0] - 0.5, local_stages[-1] + 0.5, 0, 100])
+    for k in range(len(local_stages)):
+        sbplt.text(local_stages[k] - 0.40, all_stages[k] + 0.35, str(all_stages[k]), color='green')
+    plt.subplots_adjust(hspace=0.3)
+    plt.savefig("Z:\\Tetervak\\Analysed\\"+"_HIST.jpg", dpi=300)
+
+
+
+
 if __name__ == "__main__":
     '''''''''''''''''
     # Preparing files
@@ -350,6 +429,6 @@ if __name__ == "__main__":
     interested_files = {g: [7] for g in eeg_fragments.keys()}
     writeCSVforInterestedFiles(interested_files, eeg_fragments, folder_path)
 
-    print(processed_records)
+    subPlotter(eeg_fragments, [])
 
 

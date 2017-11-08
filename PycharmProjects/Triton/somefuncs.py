@@ -192,7 +192,7 @@ def groupStatistic(res:dict,reportsList): # take results of classification as di
         histValue.append([])
         for matFile in res[columns[column]]:
             histValue[column].append(stageDetector(matFile,reportsList,fiveMinutesFragments)) # returns None if can't find time from a mat file
-            if (column==18) and (histValue[18][-1]=='2'):
+            if (column==1) and (histValue[1][-1]=='0'):
                 strangeFiles.append(matFile)
         if (histValue[column]!=[]):
             parts.append(int(100*(len(histValue[column])-histValue[column].count(None))/len(histValue[column])))
@@ -270,7 +270,7 @@ if __name__ == "__main__":
     # Preparing files
     '''''''''''''''''
     try:
-        path2results = "Z:\\Tetervak\\21_data14_4_30sec_20171031_171400.csv"
+        path2results = "Z:\\Tetervak\\21_data14_5_5min_20171108_105900.csv"
         if (path2results[-4:]=="xlsx"):
             results = results2dict(readXLSX(path2results))
         if (path2results[-3:]=="csv"):
@@ -317,8 +317,8 @@ if __name__ == "__main__":
     if csv[0]==[]:
         csv=csv[1:]
 
-    write2csv(csv,"Z:\\Tetervak\\Analysed\\"+"2 in 19 group "+fileName(path2results)+".csv")
-    exit(0)
+    #write2csv(csv,"Z:\\Tetervak\\Analysed\\"+"0 in 2 group "+fileName(path2results)+".csv")
+
 
     '''''''''''''''''
     # Plotting
@@ -331,7 +331,7 @@ if __name__ == "__main__":
     names = ["Artifacts", "Wakefulness", "First stage", "Second stage", "Third stage", "Fourth stage", "Fifth stage",
              "Sixth stage", "Seventh stage"]
     for column in range(len(columns)):
-        labels = [str(histPer[column][i]) for i in range(len(histPer[column]))]
+        #labels = [str(histPer[column][i]) for i in range(len(histPer[column]))]
         a=plt.subplot(high,width,column+1)
         plt.bar(stages,histPer[column],align='center')
         plt.title("Group "+str(column+1))
@@ -352,8 +352,27 @@ if __name__ == "__main__":
     a.set_xticklabels([str(s) for s in stages])
     #plt.xticks(rotation=50)
     plt.axis([stages[0]-0.5, stages[-1]+0.5, 0, 100])
+    for k in range(len(stages)):
+        a.text(stages[k] - 0.40, files[k] + 0.35, str(files[k]), color='green')
     plt.subplots_adjust(hspace=0.3)
     plt.savefig("Z:\\Tetervak\\Analysed\\"+fileName(path2results)+"_HIST.jpg", dpi=300)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 """
