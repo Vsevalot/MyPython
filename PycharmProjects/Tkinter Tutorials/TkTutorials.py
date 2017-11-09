@@ -1,41 +1,34 @@
 import tkinter as tk
 
-LARGE_FONT=("Verdana",12)
-
-class SeaofBTCapp(tk.Tk):
-
-    def __init__(self, *args, **kwargs):
-        tk.Tk.__init__(self, *args, **kwargs)
-        container = tk.Frame(self)
-
-        container.pack(side='top', fill='both', expand = True)
-
-        container.grid_rowconfigure(0, weight=1)
-        container.grid_columnconfigure(0, weight=1)
-
-        self.frames={}
-
-        frame = StartPage(container, self)
-
-        self.frames[StartPage] = frame
-
-        frame.grid(row=0, column=0, sticky="nsew")
-
-        self.show_frame(StartPage)
-
-    def show_frame(self, cont):
-       frame = self.frames[cont]
-       frame.tkraise()
+root = tk.Tk()
+introduction = "This script will build histograms of stage distribution for each column in given csv or " \
+               "xlsx file."
+intr = tk.Message(root,width=450, text = introduction)
+intr.config(font=("times", 12))
+intr.pack()
+instructions = "Please check that eeg fragments named like: folderName_YYYYMMDD_hh.mm.ss(startSecondsFromBeginning-" \
+               "finishSecondsFromBeginning), example: tritonRecs_19991231_23.15.40(127-183)"
+inst = tk.Message(root,width=450, text = instructions)
+inst.config(font=("times", 12))
+inst.pack()
 
 
-class StartPage(tk.Frame):
-
-    def __init__(self, parent, controller):
-        tk.Frame.__init__(self, parent)
-        label = tk.Label(self, text = "Start Page", font=LARGE_FONT)
-        label.pack(pady=10,padx=10)
+canvas_width = 900
+canvas_height =300
 
 
-latest='https://www.youtube.com/watch?v=A0gaXfM1UN0&index=2&list=PLQVvvaa0QuDclKx-QpC9wntnURXVJqLyk'
-app=SeaofBTCapp()
-app.mainloop()
+canvas = tk.Canvas(root,
+           width=canvas_width,
+           height=canvas_height)
+canvas.pack()
+
+img = tk.PhotoImage(file="e:\\Users\\sevamunger\\Desktop\\example.png")
+canvas.create_image(20,100, anchor=tk.W, image=img)
+
+
+root.title("EEG fragments analysis helper")
+label = tk.Label(root, fg="darkgreen")
+label.pack()
+button = tk.Button(root, text="Ok", width=25, command=root.destroy)
+button.pack()
+root.mainloop()

@@ -192,7 +192,7 @@ def groupStatistic(res:dict,reportsList): # take results of classification as di
         histValue.append([])
         for matFile in res[columns[column]]:
             histValue[column].append(stageDetector(matFile,reportsList,fiveMinutesFragments)) # returns None if can't find time from a mat file
-            if (column==1) and (histValue[1][-1]=='0'):
+            if (column==6-1) and (histValue[6-1][-1]=='0'):
                 strangeFiles.append(matFile)
         if (histValue[column]!=[]):
             parts.append(int(100*(len(histValue[column])-histValue[column].count(None))/len(histValue[column])))
@@ -270,7 +270,7 @@ if __name__ == "__main__":
     # Preparing files
     '''''''''''''''''
     try:
-        path2results = "Z:\\Tetervak\\21_data14_5_5min_20171108_105900.csv"
+        path2results = "Z:\\Tetervak\\21_data14_7_5min_20171109_122800.csv"
         if (path2results[-4:]=="xlsx"):
             results = results2dict(readXLSX(path2results))
         if (path2results[-3:]=="csv"):
@@ -317,7 +317,8 @@ if __name__ == "__main__":
     if csv[0]==[]:
         csv=csv[1:]
 
-    #write2csv(csv,"Z:\\Tetervak\\Analysed\\"+"0 in 2 group "+fileName(path2results)+".csv")
+    write2csv(csv,"Z:\\Tetervak\\Analysed\\"+"0 in 6 group "+fileName(path2results)+".csv")
+    exit(0)
 
 
     '''''''''''''''''

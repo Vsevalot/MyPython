@@ -5,11 +5,25 @@ import matplotlib.pyplot as plt
 from tkinter import Tk
 from tkinter.filedialog import askopenfilename
 from tkinter.filedialog import askdirectory
+from tkinter.messagebox import showerror, showwarning
+
+def errMsg(message: str, code: int = 1):
+    showerror("Error", message)
+    exit(code)
+
+
+def warningMsg(warnings_list: list):
+    warnings='\n'.join(warnings_list)
+    msg = "During operation, the following errors occurred:\n\n" + warnings
+    msg += "\n\nThese reports were not used in the statistic."
+    showwarning("Warning", msg)
+
+
 
 '''
 Gets datetime object from a string looks like 1123 or 11:23 etc 
 '''
-def reportTime(string_time: str, report_path: str) -> datetime.datetime:  # convert string to time in the given report
+def reportTime(string_time: str, report_path: str):  # convert string to time in the given report
     year = int("20" + report_path[-6:-4])
     month = int(report_path[-8:-6])
     day = int(report_path[-10:-8])
@@ -21,32 +35,31 @@ def reportTime(string_time: str, report_path: str) -> datetime.datetime:  # conv
         if char == '-':
             point = '-'
             break
+        if char == '\\':
+            point = '\\'
+            break
+        if char == '/':
+            point = '/'
+            break
     t = string_time.split(point)
-    try:
-        if (len(t) == 1):  # if there are no delimiters in the time
-            t = t[0]
-            if (len(t) == 3) or (len(t) == 4):  # if time 12:33:00 in format 1233
-                return datetime.datetime(year, month, day, int(t[:-2]), int(t[-2:]), 00)
-            if (len(t) == 5) or (len(t) == 6):
-                return datetime.datetime(year, month, day, int(t[:-4]), int(t[-4:-2]),
-                                         int(t[-2:]))  # if time 12:33:00 in format 123300
-            print("Something goes wrong, check time format:", report_path, ''.join(t))
-            exit(1)
-        if (len(t) == 2):  # if there is one delimiter in the time
-            if (len(t[0]) == 2 or len(t[0]) == 1) and len(t[1]) == 2:
-                return datetime.datetime(year, month, day, int(t[0]), int(t[1]), 00)
-            print("Something goes wrong, check time format:", report_path, ''.join(t))
-            exit(1)
-        if (len(t) == 3):  # if there are two delimiters in the time
-            if (len(t[0]) == 2 or len(t[0]) == 1) and len(t[1]) == 2 and len(t[2]) == 2:
-                return datetime.datetime(year, month, day, int(t[0]), int(t[1]), int(t[2]))
-            print("Something goes wrong, check time format:", report_path, ''.join(t))
-            exit(1)
-        print("Something goes wrong, check time format:", report_path, ''.join(t))
-        exit(1)
-    except:
-        print("Something goes wrong, check time format:", report_path, ''.join(t))
-        exit(1)
+
+    if (len(t) == 1):  # if there are no delimiters in the time
+        t = t[0]
+        if (len(t) == 3) or (len(t) == 4):  # if time 12:33:00 in format 1233
+            return datetime.datetime(year, month, day, int(t[:-2]), int(t[-2:]), 00)
+        if (len(t) == 5) or (len(t) == 6):
+            return datetime.datetime(year, month, day, int(t[:-4]), int(t[-4:-2]),
+                                     int(t[-2:]))  # if time 12:33:00 in format 123300
+        return "Something goes wrong, check time format of: " + report_path + ' ' + ''.join(t)
+    if (len(t) == 2):  # if there is one delimiter in the time
+        if (len(t[0]) == 2 or len(t[0]) == 1) and len(t[1]) == 2:
+            return datetime.datetime(year, month, day, int(t[0]), int(t[1]), 00)
+        return "Something goes wrong, check time format of: " + report_path + ' ' + ''.join(t)
+    if (len(t) == 3):  # if there are two delimiters in the time
+        if (len(t[0]) == 2 or len(t[0]) == 1) and len(t[1]) == 2 and len(t[2]) == 2:
+            return datetime.datetime(year, month, day, int(t[0]), int(t[1]), int(t[2]))
+        return "Something goes wrong, check time format of: " + report_path + ' ' + ''.join(t)
+    return "Something goes wrong, check time format of: " + report_path + ' ' + ''.join(t)
 
 
 '''
@@ -80,6 +93,8 @@ def matName2Time(matfile_name: str) -> [datetime.datetime, int]:  # convert Mat 
         time_delta = 30
 
     name = matfile_name.split('_')
+    if (len(name)==2):
+        name.insert(0, "folder")
     dt = datetime.datetime(int(name[1][0:4]), int(name[1][4:6]), int(name[1][6:8]), int(name[2][:2]), int(name[2][3:5]),
                            int(name[2][6:8])) + datetime.timedelta(seconds=start_second)
     return [dt, time_delta]
@@ -158,8 +173,6 @@ class EEG_Fragment(object):  # contain name of the eeg fragment, stage and ketam
         self.stage = stage
         self.day_time = matName2Time(matfile_name)[0]
         self.ketamine = ketamine
-        if matfile_name[:7] == "folder_":
-            matfile_name = matfile_name[7:]
         self.name = matfile_name
         self.report_name = report
 
@@ -175,9 +188,9 @@ class Report(object):  # a list of records, with name, date and ketamine drugs
     def chronoChecker(self):  # check that all times are in correct order
         for i in range(1, len(self.records), 1):
             if self.records[i].time < self.records[i - 1].time:
-                print("Wrong time order check file:", self.name, str(self.records[i].time))
-                exit(0)
-        return True
+                self.correct_report = False
+                self.reason = "Incorrect time order: " + str(self.records[i].time) + '->' + str(self.records[i - 1].time)
+
 
     def __init__(self, report_path, csv):
         self.name = fileFromPath(report_path)
@@ -192,8 +205,22 @@ class Report(object):  # a list of records, with name, date and ketamine drugs
                 self.records.append(Record(report_path, csv[0][i], csv[1][i]))
             if len(csv) == 3:
                 self.records.append(Record(report_path, csv[0][i], csv[1][i], csv[2][i]))
-        self.records[0].time -= datetime.timedelta(
-            seconds=30)  # pick first time for 30 seconds earlier to allow 12:22:01 mat file find 12:21:59 record
+
+        self.correct_report = True
+        self.reason = ''
+
+        for rec in self.records:
+            if type(rec.time) != datetime.datetime:
+                self.correct_report = False
+                self.reason = rec.time
+                break
+
+
+        if self.correct_report:
+            self.records[0].time -= datetime.timedelta(
+                seconds=10)  # pick first time for 10 seconds earlier to allow 12:22:01 mat file find 12:21:59 record
+            self.records[-1].time += datetime.timedelta(
+                seconds=10)  # pick last time for 10 seconds later to allow 12:22:59 mat file find 12:23:01 record
         self.day_time = self.records[0].time
         self.chronoChecker()
 
@@ -240,10 +267,16 @@ Takes a dictionary of matfiles lists and returns dictionary of EEG_Fragments
 '''
 def matfiles2eegFragments(results: dict, reports_list: list):
     reports = [Report(report, readCSV(report)) for report in reports_list]
+    correct_reports = [r for r in reports  if r.correct_report == True]
+    incorrect_reports = [r for r in reports if r.correct_report == False]
     group_names = list(results.keys())
     for group in group_names:
         for matfile in range(len(results[group])):
-            results[group][matfile] = getStage("folder_" + results[group][matfile], reports)
+            results[group][matfile] = getStage("folder_" + results[group][matfile], correct_reports)
+
+    if incorrect_reports!=[]:
+        err_msgs=["File: " + report.name + ", reason: " + report.reason for report in incorrect_reports ]
+        warningMsg(err_msgs)
     return results
 
 
@@ -377,11 +410,12 @@ def subPlotter(eeg: dict, stage_ignore: list):
 
 
 
-
 if __name__ == "__main__":
     '''''''''''''''''
     # Preparing files
     '''''''''''''''''
+    root = Tk()
+    root.withdraw()
     try:
         path2results = "Z:\\Tetervak\\21_data14_4_30sec_20171031_171400.csv"
         if (path2results[-4:] == "xlsx"):
@@ -393,11 +427,10 @@ if __name__ == "__main__":
         path2reports = "E:\\test\\Reports\\complete"
         reports_list = [os.path.join(path2reports, f) for f in os.listdir(path2reports) if
                         os.path.isfile(os.path.join(path2reports, f))]
-    except:
+    except FileNotFoundError:
         '''''''''''''''''
         # Results file window
         '''''''''''''''''
-        Tk().withdraw()
         path2results = askopenfilename(filetype=(("XLSX File", "*.xlsx"), ("CSV File", "*.csv")),
                                        title="Choose a file with results of classification")
         if (path2results == ''):
@@ -412,7 +445,6 @@ if __name__ == "__main__":
         '''''''''''''''''
         # Reports folder window
         '''''''''''''''''
-        Tk().withdraw()
         path2reports = askdirectory(title="Choose a folder which contain reports")
         if (path2reports == ''):
             exit(0)
@@ -429,6 +461,6 @@ if __name__ == "__main__":
     interested_files = {g: [7] for g in eeg_fragments.keys()}
     writeCSVforInterestedFiles(interested_files, eeg_fragments, folder_path)
 
-    subPlotter(eeg_fragments, [])
+    #subPlotter(eeg_fragments, [])
 
 
