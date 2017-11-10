@@ -90,7 +90,7 @@ def matName2Time(matfile_name: str) -> [datetime.datetime, int]:  # convert Mat 
         time_delta = int(time_delta.split('-')[1]) - int(time_delta.split('-')[0])  # time delta  = 120-100 = 20 seconds
     else:
         start_second = 30 * int(time_delta)  # if in only 30 seconds parts
-        time_delta = 30
+        time_delta = 300
 
     name = matfile_name.split('_')
     if (len(name)==2):
@@ -165,7 +165,7 @@ def results2Dict(results: list) -> dict:  # convert values from "'abc'\n" to "ab
             else:
                 results[i] = results[i][:k]
                 break
-    return {"Group_" + str(i + 1): results[i] for i in range(len(results))}
+    return {"Group " + str(i + 1): results[i] for i in range(len(results))}
 
 
 class EEG_Fragment(object):  # contain name of the eeg fragment, stage and ketamine drugs
@@ -363,15 +363,46 @@ def recSubPlotDet(plotNumber: int):
 '''
 Plots histograms for each non empty group and save them to the result's folder
 '''
-def subPlotter(eeg: dict, stage_ignore: list):
+def subPlotter(eeg: dict, stage_ignore: list, save_path: str):
+    if not os.path.exists(save_path):
+        os.makedirs(save_path)
+
     local_stages = [stage for stage in STAGES if stage not in stage_ignore]
+
     sum_of_fragments = sum([len([fragment for fragment in eeg[group] if (fragment.stage is not None) and
                                  (fragment.stage not in stage_ignore)]) for group in eeg])
-    bar_values = {group: {stage: len([fragment.stage for fragment in eeg[group] if fragment.stage == stage]) for stage
-                          in local_stages} for group in eeg}
-    bar_per = {group: [round(100*bar_values[group][n]/sum_of_fragments, 2) for n in bar_values[group]] for group in bar_values
-               if bar_values[group]!={s: 0 for s in local_stages}}
-    all_stages = [round(sum([bar_values[group][stage] for group in bar_values])/sum_of_fragments,2) for stage in local_stages]
+
+    bar_values = {group: {stage: len([fragment.stage for fragment in eeg[group] if fragment.stage == stage])
+                          for stage in local_stages} for group in eeg}
+
+    for group in bar_values:
+        if all(bar_values[group][stage] == 0 for stage in bar_values[group]):
+            bar_values[group]=None
+    bar_values={group:bar_values[group] for group in bar_values if bar_values[group] is not None}
+
+    bar_per = {group: [round(100*bar_values[group][n]/sum_of_fragments, 2) for n in bar_values[group]]
+               for group in bar_values if bar_values[group]!={s: 0 for s in local_stages}}
+
+    all_stages = [round(100*sum([bar_values[group][stage] for group in bar_values])/sum_of_fragments,2)
+                  for stage in local_stages]
+
+    # for group in bar_values:
+    #     bar_values[group]={stage:bar_values[group][stage] for stage in bar_values[group].keys()
+    #                        if int(stage) not in [-1,4,5,6,7]}
+
+
+    group_errs={}
+    for group in bar_values:
+        group_errs[group]=0
+        for stage in bar_values[group]:
+            mult = abs(max(bar_values[group], key=bar_values[group].get)-int(stage))
+            stage_val = bar_values[group][stage]
+            stage_sum = sum([bar_values[group][v] for v in bar_values[group]])
+            group_errs[group] += mult*stage_val/stage_sum
+            pass
+        group_errs[group]=round(group_errs[group],4)
+    total_err = sum([group_errs[g] for g in group_errs])
+    worst_group = max(group_errs, key=group_errs.get)
 
 
     '''
@@ -379,34 +410,35 @@ def subPlotter(eeg: dict, stage_ignore: list):
     '''
     high, width=recSubPlotDet(len(bar_values)+1)
 
-    matplotlib.rcParams.update({'font.size': 14})
+    matplotlib.rcParams.update({"font.size": 18})
     plt.figure(figsize=(40.0, 25.0))
     i=1
     for group in bar_per:
         sbplt=plt.subplot(high,width,i)
-        plt.bar(local_stages,bar_per[group],align='center')
-        plt.title(group)
+        plt.bar(local_stages,bar_per[group],align="center")
+        title = group + " ; error = " + str (group_errs[group])
+        plt.title(title)
         plt.ylabel("Percentage")
         sbplt.set_xticks([tick-0.0 for tick in local_stages])
         sbplt.set_xticklabels([str(s) for s in local_stages])
-        #plt.xticks(rotation=50)
         plt.axis([ local_stages[0]-0.5,  local_stages[-1]+0.5, 0,100])
         for k in range(len(local_stages)):
-            sbplt.text(local_stages[k]-0.40, bar_per[group][k] + 0.35, str(bar_per[group][k]), color='blue')
+            sbplt.text(local_stages[k]-0.40, bar_per[group][k] + 0.35, str(bar_per[group][k]), color="blue")
         i+=1
 
     sbplt=plt.subplot(high, width, high*width)
-    plt.bar(local_stages,all_stages, color='g',align='center')
-    plt.title("Total number of stages")
+    plt.bar(local_stages,all_stages, color='g',align="center")
+    err_text = "Total error = " + str(total_err) +  ", the worst group - " + worst_group
+    plt.text(-1,110, err_text)
+    plt.title("Total stages ratio")
     plt.ylabel("Percentage")
     sbplt.set_xticks([tick - 0.0 for tick in local_stages])
     sbplt.set_xticklabels([str(s) for s in local_stages])
-    #plt.xticks(rotation=50)
     plt.axis([local_stages[0] - 0.5, local_stages[-1] + 0.5, 0, 100])
     for k in range(len(local_stages)):
-        sbplt.text(local_stages[k] - 0.40, all_stages[k] + 0.35, str(all_stages[k]), color='green')
+        sbplt.text(local_stages[k] - 0.40, all_stages[k] + 0.35, str(all_stages[k]), color='g')
     plt.subplots_adjust(hspace=0.3)
-    plt.savefig("Z:\\Tetervak\\Analysed\\"+"_HIST.jpg", dpi=300)
+    plt.savefig(save_path+"\\HIST.jpg", dpi=300)
 
 
 
@@ -417,7 +449,7 @@ if __name__ == "__main__":
     root = Tk()
     root.withdraw()
     try:
-        path2results = "Z:\\Tetervak\\21_data14_4_30sec_20171031_171400.csv"
+        path2results = "Z:\\Tetervak\\21_data14_6_5min_20171108_155100.csv"
         if (path2results[-4:] == "xlsx"):
             results = results2Dict(readXLSX(path2results))
             folder_path = path2results[:-5]
@@ -458,9 +490,9 @@ if __name__ == "__main__":
     processed_records = [(len(eeg_fragments[g]) - len([eeg for eeg in eeg_fragments[g] if eeg.stage == None])) /
                          len(eeg_fragments[g]) if len(eeg_fragments[g]) != 0 else -1 for g in eeg_fragments]
 
-    interested_files = {g: [7] for g in eeg_fragments.keys()}
+    interested_files = {g: [] for g in eeg_fragments.keys()}
     writeCSVforInterestedFiles(interested_files, eeg_fragments, folder_path)
 
-    #subPlotter(eeg_fragments, [])
+    subPlotter(eeg_fragments, [-1,4,5,6,7],folder_path)
 
 

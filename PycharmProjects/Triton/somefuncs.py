@@ -270,7 +270,7 @@ if __name__ == "__main__":
     # Preparing files
     '''''''''''''''''
     try:
-        path2results = "Z:\\Tetervak\\21_data14_7_5min_20171109_122800.csv"
+        path2results = "Z:\\Tetervak\\21_data14_8_5min_20171110_110000.csv"
         if (path2results[-4:]=="xlsx"):
             results = results2dict(readXLSX(path2results))
         if (path2results[-3:]=="csv"):
@@ -317,8 +317,8 @@ if __name__ == "__main__":
     if csv[0]==[]:
         csv=csv[1:]
 
-    write2csv(csv,"Z:\\Tetervak\\Analysed\\"+"0 in 6 group "+fileName(path2results)+".csv")
-    exit(0)
+    # write2csv(csv,"Z:\\Tetervak\\Analysed\\"+"0 in 6 group "+fileName(path2results)+".csv")
+    # exit(0)
 
 
     '''''''''''''''''
