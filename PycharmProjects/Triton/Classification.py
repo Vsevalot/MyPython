@@ -2,6 +2,7 @@ import os
 import datetime
 import matplotlib
 import matplotlib.pyplot as plt
+import shutil
 from tkinter import Tk
 from tkinter.filedialog import askopenfilename
 from tkinter.filedialog import askdirectory
@@ -386,10 +387,6 @@ def subPlotter(eeg: dict, stage_ignore: list, save_path: str):
     all_stages = [round(100*sum([bar_values[group][stage] for group in bar_values])/sum_of_fragments,2)
                   for stage in local_stages]
 
-    # for group in bar_values:
-    #     bar_values[group]={stage:bar_values[group][stage] for stage in bar_values[group].keys()
-    #                        if int(stage) not in [-1,4,5,6,7]}
-
 
     group_errs={}
     for group in bar_values:
@@ -441,6 +438,53 @@ def subPlotter(eeg: dict, stage_ignore: list, save_path: str):
     plt.savefig(save_path+"\\HIST.jpg", dpi=300)
 
 
+'''
+Determines path where to save all files
+'''
+def savePathDeterminer(results_path):
+    if (fileFromPath(results_path) != results_path.split('\\')[-2]):
+        return '.'.join(results_path.split('.')[:-1])
+    return '\\'.join(results_path.split('\\')[:-1])
+
+
+'''
+Reads results
+'''
+def resultReader(results_path: str):
+    try:
+        return results2Dict(readXLSX(results_path)) if results_path[-4:] == "xlsx" else\
+            results2Dict(readCSV(results_path))
+    except FileNotFoundError:
+        '''''''''''''''''
+        # Results file window
+        '''''''''''''''''
+        path = askopenfilename(filetype=(("CSV File", "*.csv"), ("XLSX File", "*.xlsx")),
+                                       title="Choose a file with results of classification")
+        if (path == ''):
+            exit(0)
+        return results2Dict(readXLSX(path)) if path[-4:] == "xlsx" else  results2Dict(readCSV(path))
+
+
+'''
+Prepare reports
+'''
+def reportReader(reports_path: str ):
+    try:
+        reports_list = [os.path.join(reports_path, f) for f in os.listdir(reports_path) if
+                        os.path.isfile(os.path.join(reports_path, f))]
+        return reports_list
+    except FileNotFoundError:
+        '''''''''''''''''
+        # Reports folder window
+        '''''''''''''''''
+        path = askdirectory(title="Choose a folder which contain reports")
+        if (path == ''):
+            exit(0)
+        return [os.path.join(path, f) for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))]
+
+
+
+
 
 if __name__ == "__main__":
     '''''''''''''''''
@@ -448,40 +492,12 @@ if __name__ == "__main__":
     '''''''''''''''''
     root = Tk()
     root.withdraw()
-    try:
-        path2results = "Z:\\Tetervak\\21_data14_6_5min_20171108_155100.csv"
-        if (path2results[-4:] == "xlsx"):
-            results = results2Dict(readXLSX(path2results))
-            folder_path = path2results[:-5]
-        if (path2results[-3:] == "csv"):
-            results = results2Dict(readCSV(path2results))
-            folder_path = path2results[:-4]
-        path2reports = "E:\\test\\Reports\\complete"
-        reports_list = [os.path.join(path2reports, f) for f in os.listdir(path2reports) if
-                        os.path.isfile(os.path.join(path2reports, f))]
-    except FileNotFoundError:
-        '''''''''''''''''
-        # Results file window
-        '''''''''''''''''
-        path2results = askopenfilename(filetype=(("XLSX File", "*.xlsx"), ("CSV File", "*.csv")),
-                                       title="Choose a file with results of classification")
-        if (path2results == ''):
-            exit(0)
-        if (path2results[-4:] == "xlsx"):
-            results = results2Dict(readXLSX(path2results))
-            folder_path = path2results[:-5]
-        if (path2results[-3:] == "csv"):
-            results = results2Dict(readCSV(path2results))
-            folder_path = path2results[:-4]
 
-        '''''''''''''''''
-        # Reports folder window
-        '''''''''''''''''
-        path2reports = askdirectory(title="Choose a folder which contain reports")
-        if (path2reports == ''):
-            exit(0)
-        reports_list = [os.path.join(path2reports, f) for f in os.listdir(path2reports) if
-                        os.path.isfile(os.path.join(path2reports, f))]
+    path_to_results = "Z:\\Tetervak\\21_data14_11_5min_20171113_121800.csv"
+    path_to_reports = "E:\\test\\Reports\\complete"
+    results = resultReader(path_to_results)
+    reports_list = reportReader(path_to_reports)
+    save_path = savePathDeterminer(path_to_results)
 
 
     eeg_fragments = matfiles2eegFragments(results, reports_list)  # returns the dictionary of eeg objects
@@ -491,8 +507,8 @@ if __name__ == "__main__":
                          len(eeg_fragments[g]) if len(eeg_fragments[g]) != 0 else -1 for g in eeg_fragments]
 
     interested_files = {g: [] for g in eeg_fragments.keys()}
-    writeCSVforInterestedFiles(interested_files, eeg_fragments, folder_path)
+    writeCSVforInterestedFiles(interested_files, eeg_fragments, save_path)
 
-    subPlotter(eeg_fragments, [-1,4,5,6,7],folder_path)
 
+    subPlotter(eeg_fragments, [-1,4,5,6,7],save_path)
 
