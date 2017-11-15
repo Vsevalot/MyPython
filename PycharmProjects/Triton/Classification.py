@@ -21,6 +21,53 @@ def warningMsg(warnings_list: list):
 
 
 
+
+
+'''
+Reads results
+'''
+def resultReader(results_path: str):
+    try:
+        return results2Dict(readXLSX(results_path)) if results_path[-4:] == "xlsx" else\
+            results2Dict(readCSV(results_path))
+    except FileNotFoundError:
+        '''''''''''''''''
+        # Results file window
+        '''''''''''''''''
+        path = askopenfilename(filetype=(("CSV File", "*.csv"), ("XLSX File", "*.xlsx")),
+                                       title="Choose a file with results of classification")
+        if (path == ''):
+            exit(0)
+        return results2Dict(readXLSX(path)) if path[-4:] == "xlsx" else  results2Dict(readCSV(path))
+
+
+'''
+Prepare reports
+'''
+def reportReader(reports_path: str ):
+    try:
+        reports_list = [os.path.join(reports_path, f) for f in os.listdir(reports_path) if
+                        os.path.isfile(os.path.join(reports_path, f))]
+        return reports_list
+    except FileNotFoundError:
+        '''''''''''''''''
+        # Reports folder window
+        '''''''''''''''''
+        path = askdirectory(title="Choose a folder which contain reports")
+        if (path == ''):
+            exit(0)
+        return [os.path.join(path, f) for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))]
+
+
+'''
+Determines path where to save all files
+'''
+def savePathDeterminer(results_path):
+    if (fileFromPath(results_path) != results_path.split('\\')[-2]):
+        return '.'.join(results_path.split('.')[:-1])
+    return '\\'.join(results_path.split('\\')[:-1])
+
+
 '''
 Gets datetime object from a string looks like 1123 or 11:23 etc 
 '''
@@ -154,6 +201,8 @@ def readXLSX(xlsx_path: str) -> list:
 Converts csv list of lists to dictionary of lists
 '''
 def results2Dict(results: list) -> dict:  # convert values from "'abc'\n" to "abc"
+    time_interval=True
+    five_minutes=True
     for i in range(len(results)):
         for k in range(len(results[i])):
             if results[i][k] != '':
@@ -163,10 +212,33 @@ def results2Dict(results: list) -> dict:  # convert values from "'abc'\n" to "ab
                     results[i][k] = results[i][k][:-1]
                 if results[i][k][0] == "\t":
                     results[i][k] = results[i][k][1:]
+                time = results[i][k].split('(')[-1].split(')')[0]
+                if len(time.split('-')) == 1:
+                    time_interval = False
+                    if time != '0':
+                        five_minutes = False
             else:
                 results[i] = results[i][:k]
                 break
+
+    if time_interval:
+        return {"Group " + str(i + 1): results[i] for i in range(len(results))}
+
+    if five_minutes:
+        for i in range(len(results)):
+            for k in range(len(results[i])):
+                results[i][k] = results[i][k].split('(')[0] + "(0-300)" + results[i][k].split('(')[-1].split(')')[-1]
+        return {"Group " + str(i + 1): results[i] for i in range(len(results))}
+
+    for i in range(len(results)):
+        for k in range(len(results[i])):
+            multiplier=int(results[i][k].split('(')[-1].split(')')[0])
+            start = str(multiplier*30)
+            finish = str((multiplier+1)*30)
+            results[i][k] = results[i][k].split('(')[0] + '(' + start + '-' + finish + ')'\
+                            + results[i][k].split('(')[-1].split(')')[-1]
     return {"Group " + str(i + 1): results[i] for i in range(len(results))}
+
 
 
 class EEG_Fragment(object):  # contain name of the eeg fragment, stage and ketamine drugs
@@ -242,24 +314,23 @@ def getStage(matfile: str, reports: list):
         if (report.records[0].time > eeg_time) or (report.records[-1].time < eeg_time):
             continue
 
-        time_dif = [abs((eeg_time.timestamp() - s.time.timestamp())) for s in report.records ]
-        closest = time_dif.index(min(time_dif))
+        time_dif = [s.time.timestamp()-eeg_time.timestamp() for s in report.records ]
+        closest = time_dif.index(min([s for s in time_dif if s>0]))
         stages = {stage: 0 for stage in STAGES}
-        i = closest
-        while (1):
-            stages[report.records[i].stage] += abs((eeg_time - report.records[i].time).seconds)
-            i+=1
-            if i == len(report.records):
-                if sum([stages[stage] for stage in stages]) > time_delta:
-                    stages[report.records[i-1].stage]-= abs((eeg_time - report.records[i-1].time).seconds)
-                    stages[report.records[i - 1].stage] += time_delta - sum([stages[stage] for stage in stages])
-                eeg_stage = max(stages, key=stages.get)
-                return EEG_Fragment(matfile, report.name, eeg_stage, report.ketamine)
+        for i in range(closest, len(report.records),1):
+            if (eeg_time.timestamp() - report.records[i].time.timestamp()<0):
+                if i==closest:
+                    stages[report.records[i-1].stage] += report.records[i].time.timestamp() - eeg_time.timestamp()
+                else:
+                    stages[report.records[i - 1].stage] += report.records[i].time.timestamp() - \
+                                                       report.records[i-1].time.timestamp()
             if sum([stages[stage] for stage in stages]) > time_delta:
-                stages[report.records[i - 1].stage] -= abs((eeg_time - report.records[i - 1].time).seconds)
+                stages[report.records[i - 1].stage] -= report.records[i].time.timestamp() - \
+                                                       report.records[i-1].time.timestamp()
                 stages[report.records[i - 1].stage] += time_delta - sum([stages[stage] for stage in stages])
-                eeg_stage = max(stages, key=stages.get)
-                return EEG_Fragment(matfile, report.name, eeg_stage, report.ketamine)
+                break
+        eeg_stage = max(stages, key=stages.get)
+        return EEG_Fragment(matfile, report.name, eeg_stage, report.ketamine)
     return EEG_Fragment(matfile)
 
 
@@ -396,9 +467,8 @@ def subPlotter(eeg: dict, stage_ignore: list, save_path: str):
             stage_val = bar_values[group][stage]
             stage_sum = sum([bar_values[group][v] for v in bar_values[group]])
             group_errs[group] += mult*stage_val/stage_sum
-            pass
         group_errs[group]=round(group_errs[group],4)
-    total_err = sum([group_errs[g] for g in group_errs])
+    total_err = round(sum([group_errs[g] for g in group_errs]),3)
     worst_group = max(group_errs, key=group_errs.get)
 
 
@@ -438,53 +508,6 @@ def subPlotter(eeg: dict, stage_ignore: list, save_path: str):
     plt.savefig(save_path+"\\HIST.jpg", dpi=300)
 
 
-'''
-Determines path where to save all files
-'''
-def savePathDeterminer(results_path):
-    if (fileFromPath(results_path) != results_path.split('\\')[-2]):
-        return '.'.join(results_path.split('.')[:-1])
-    return '\\'.join(results_path.split('\\')[:-1])
-
-
-'''
-Reads results
-'''
-def resultReader(results_path: str):
-    try:
-        return results2Dict(readXLSX(results_path)) if results_path[-4:] == "xlsx" else\
-            results2Dict(readCSV(results_path))
-    except FileNotFoundError:
-        '''''''''''''''''
-        # Results file window
-        '''''''''''''''''
-        path = askopenfilename(filetype=(("CSV File", "*.csv"), ("XLSX File", "*.xlsx")),
-                                       title="Choose a file with results of classification")
-        if (path == ''):
-            exit(0)
-        return results2Dict(readXLSX(path)) if path[-4:] == "xlsx" else  results2Dict(readCSV(path))
-
-
-'''
-Prepare reports
-'''
-def reportReader(reports_path: str ):
-    try:
-        reports_list = [os.path.join(reports_path, f) for f in os.listdir(reports_path) if
-                        os.path.isfile(os.path.join(reports_path, f))]
-        return reports_list
-    except FileNotFoundError:
-        '''''''''''''''''
-        # Reports folder window
-        '''''''''''''''''
-        path = askdirectory(title="Choose a folder which contain reports")
-        if (path == ''):
-            exit(0)
-        return [os.path.join(path, f) for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))]
-
-
-
-
 
 if __name__ == "__main__":
     '''''''''''''''''
@@ -493,7 +516,7 @@ if __name__ == "__main__":
     root = Tk()
     root.withdraw()
 
-    path_to_results = "Z:\\Tetervak\\21_data14_11_5min_20171113_121800.csv"
+    path_to_results = "Z:\\Tetervak\\21_data15_5min_20171114_101500.csv"
     path_to_reports = "E:\\test\\Reports\\complete"
     results = resultReader(path_to_results)
     reports_list = reportReader(path_to_reports)
@@ -507,7 +530,10 @@ if __name__ == "__main__":
                          len(eeg_fragments[g]) if len(eeg_fragments[g]) != 0 else -1 for g in eeg_fragments]
 
     interested_files = {g: [] for g in eeg_fragments.keys()}
+    interested_files["Group 5"] = [1,2]
+    interested_files["Group 17"] = [1,3]
     writeCSVforInterestedFiles(interested_files, eeg_fragments, save_path)
+    exit(0)
 
 
     subPlotter(eeg_fragments, [-1,4,5,6,7],save_path)
