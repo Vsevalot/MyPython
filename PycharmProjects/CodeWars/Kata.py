@@ -1,8 +1,7 @@
-def order_weight(strng):
-    sums=[[sum([int(v) for v in weight.split()]), weight] for weight in strng.split(' ')]
+from matplotlib.pyplot import plot, draw, show
+plot([1,2,3])
+draw()
+print('continue computation')
 
-
-
-
-
-a="103 123 4444 99 2000"
+# at the end call show to ensure window won't close.
+show()

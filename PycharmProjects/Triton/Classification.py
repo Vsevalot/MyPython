@@ -2,23 +2,26 @@ import os
 import datetime
 import matplotlib
 import matplotlib.pyplot as plt
-import shutil
-from tkinter import Tk
+import matplotlib.widgets
+from tkinter import Tk, Frame, LEFT, RIGHT, W, Checkbutton, Message, Button, BooleanVar, Canvas, PhotoImage, E
 from tkinter.filedialog import askopenfilename
 from tkinter.filedialog import askdirectory
 from tkinter.messagebox import showerror, showwarning
 
 def errMsg(message: str, code: int = 1):
+    root = Tk()
     showerror("Error", message)
+    root.destroy()
     exit(code)
 
 
 def warningMsg(warnings_list: list):
+    root = Tk()
     warnings='\n'.join(warnings_list)
     msg = "During operation, the following errors occurred:\n\n" + warnings
     msg += "\n\nThese reports were not used in the statistic."
     showwarning("Warning", msg)
-
+    root.destroy()
 
 
 
@@ -34,8 +37,11 @@ def resultReader(results_path: str):
         '''''''''''''''''
         # Results file window
         '''''''''''''''''
+        root = Tk()
+        root.withdraw()
         path = askopenfilename(filetype=(("CSV File", "*.csv"), ("XLSX File", "*.xlsx")),
                                        title="Choose a file with results of classification")
+        root.destroy()
         if (path == ''):
             exit(0)
         return results2Dict(readXLSX(path)) if path[-4:] == "xlsx" else  results2Dict(readCSV(path))
@@ -53,7 +59,10 @@ def reportReader(reports_path: str ):
         '''''''''''''''''
         # Reports folder window
         '''''''''''''''''
+        root = Tk()
+        root.withdraw()
         path = askdirectory(title="Choose a folder which contain reports")
+        root.destroy()
         if (path == ''):
             exit(0)
         return [os.path.join(path, f) for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))]
@@ -119,7 +128,7 @@ def fileFromPath(file_path: str) -> str:
     elif '/' in file_path:
         file_name = ''.join(file_path.split('/')[-1])
     else:
-        print("Incorrect file path: ", file_path)
+        errMsg(file_path)
         exit(1)
     for i in range(len(file_name) - 1, -1, -1):  # remove expansion from file name
         if file_name[i] == '.':
@@ -298,6 +307,22 @@ class Report(object):  # a list of records, with name, date and ketamine drugs
         self.chronoChecker()
 
 
+class Checkbar(Frame):
+    def __init__(self, parent, check_buttons, side=LEFT, anchor=W):
+        Frame.__init__(self, parent)
+        self.vars = []
+        for button in check_buttons:
+            chk = Checkbutton(self, text=str(button), variable=check_buttons[button])
+            chk.pack(side=side, anchor=anchor)
+            if (check_buttons[button].get()==True):
+                chk.select()
+            self.vars.append(check_buttons[button])
+
+    def state(self):
+        return list(map(lambda var: var.get(), self.vars))
+
+
+
 STAGES = [-1, 0, 1, 2, 3, 4, 5, 6, 7]
 STAGE_NAMES = ["Artifacts", "Wakefulness", "First stage", "Second stage", "Third stage", "Fourth stage", "Fifth stage",
          "Sixth stage", "Seventh stage"]
@@ -344,7 +369,10 @@ def matfiles2eegFragments(results: dict, reports_list: list):
     group_names = list(results.keys())
     for group in group_names:
         for matfile in range(len(results[group])):
-            results[group][matfile] = getStage("folder_" + results[group][matfile], correct_reports)
+            if results[group][matfile][:3]!="rec":
+                results[group][matfile] = getStage("folder_" + results[group][matfile], correct_reports)
+            else:
+                results[group][matfile] = getStage(results[group][matfile], correct_reports)
 
     if incorrect_reports!=[]:
         err_msgs=["File: " + report.name + ", reason: " + report.reason for report in incorrect_reports ]
@@ -357,7 +385,7 @@ Writes a list of lists to csv
 '''
 def write2csv(twoD_list: list, file_name: str, path2save: str = ''):
     if type(twoD_list[0]) != list:
-        print("You should give a list of lists to write it for csv")
+        errMsg("You should give a list of lists to write it for csv")
         exit(0)
     try:
         if path2save != '':
@@ -400,9 +428,9 @@ def writeCSVforInterestedFiles(file_dict: dict, eeg: dict, save_path: str):
             csv = [ ["Report : " + report_name] + [eeg_fragment.name for eeg_fragment in csv
                    if eeg_fragment.report_name == report_name] for report_name in reports]
             try:
-                write2csv(csv, group + '_stage_' + str(stage), save_path)
+                write2csv(csv, group + ' stage ' + str(stage), save_path)
             except:
-                write2csv(csv, group + '_stage_' + str(stage))
+                write2csv(csv, group + ' stage ' + str(stage))
 
 
 '''
@@ -435,14 +463,15 @@ def recSubPlotDet(plotNumber: int):
 '''
 Plots histograms for each non empty group and save them to the result's folder
 '''
-def subPlotter(eeg: dict, stage_ignore: list, save_path: str):
+def subPlotter(eeg: dict, stage_ignore: dict, save_path: str):
     if not os.path.exists(save_path):
         os.makedirs(save_path)
 
-    local_stages = [stage for stage in STAGES if stage not in stage_ignore]
+    local_stages = [stage for stage in STAGES if stage not in [int(stage) for stage in stage_ignore if
+                                                               stage_ignore[stage]==True]]
 
     sum_of_fragments = sum([len([fragment for fragment in eeg[group] if (fragment.stage is not None) and
-                                 (fragment.stage not in stage_ignore)]) for group in eeg])
+                                 (fragment.stage in local_stages)]) for group in eeg])
 
     bar_values = {group: {stage: len([fragment.stage for fragment in eeg[group] if fragment.stage == stage])
                           for stage in local_stages} for group in eeg}
@@ -472,12 +501,50 @@ def subPlotter(eeg: dict, stage_ignore: list, save_path: str):
     worst_group = max(group_errs, key=group_errs.get)
 
 
+
+    def checkBarWindow():
+        root = Tk()
+        root.title("Reports generating")
+
+        instructions = "Select the elements in the groups for which you want to generate reports" \
+                       " with the names of the files"
+        Message(root, text=instructions, width=240).pack(anchor=W)
+
+        groups = list(bar_values.keys())
+        groups = {group: {str(stage): BooleanVar() for stage in local_stages} for group in groups}
+
+
+        interested_stages = []
+        for group in groups:
+            Message(root, text=group, width=100).pack(anchor=W)
+            interested_stages.append(Checkbar(root, groups[group]))
+            interested_stages[-1].pack()
+
+        def cancelAndReset():
+            for g in groups:
+                for s in groups[g]:
+                    groups[g][s].set(False)
+            root.destroy()
+
+        Button(root, text="Cancel", command=cancelAndReset).pack(side=RIGHT)
+
+        Button(root, text="Ok", command=root.destroy).pack(side=LEFT)
+
+        root.mainloop()
+
+        for g in groups:
+            for s in groups[g]:
+                groups[g][s] = groups[g][s].get()
+
+        return {g: [int(stage) for stage in groups[g] if groups[g][stage]==True] for g in groups}
+
+
     '''
     Plotting
     '''
     high, width=recSubPlotDet(len(bar_values)+1)
 
-    matplotlib.rcParams.update({"font.size": 18})
+
     plt.figure(figsize=(40.0, 25.0))
     i=1
     for group in bar_per:
@@ -505,18 +572,92 @@ def subPlotter(eeg: dict, stage_ignore: list, save_path: str):
     for k in range(len(local_stages)):
         sbplt.text(local_stages[k] - 0.40, all_stages[k] + 0.35, str(all_stages[k]), color='g')
     plt.subplots_adjust(hspace=0.3)
+    plt.show(block=False)
+    interested_files = checkBarWindow()
+
+    writeCSVforInterestedFiles(interested_files, eeg_fragments, save_path)
+
+    matplotlib.rcParams.update({"font.size": 18})
     plt.savefig(save_path+"\\HIST.jpg", dpi=300)
 
+
+
+def startWindow():
+    def endProg():
+        root.destroy()
+        exit(0)
+
+    root = Tk()
+    root.title("EEG fragments analysis helper")
+
+    introduction = "This script will build histograms of stage distribution for each column in a given csv or xlsx file."
+    intr = Message(root, width=750, text=introduction)
+    intr.config(font=(12))
+    intr.grid(row=0, ipadx=15, ipady=15, sticky=W)
+
+    instructions = "Please check that all eeg fragments are named like:\n" \
+                   "folder name_YYYYMMDD_hh.mm.ss(start seconds from beginning-finish seconds from beginning)\n\n" \
+                   "Example:"
+    inst = Message(root, width=750, text=instructions)
+    inst.config(font=("times", 14))
+    inst.grid(row=1, ipadx=15, sticky=W)
+
+    canvas_width = 770
+    canvas_height = 142
+    canvas = Canvas(root, width=canvas_width, height=canvas_height, borderwidth=4, relief="groove")
+    canvas.grid(row=2, padx=10)
+    img = PhotoImage(file="e:\\Users\\sevamunger\\Desktop\\example.png")
+    canvas.create_image(5, 75, anchor=W, image=img)
+
+    continue_button = Button(root, text="Exit", width=10, command=endProg, borderwidth=3)
+    continue_button.grid(row=3, column=0, sticky=E, padx=20, pady=10)
+    exit_button = Button(root, text="Continue", width=16, command=root.destroy, borderwidth=3)
+    exit_button.grid(row=3, column=0, sticky=W, padx=40, pady=10)
+    root.mainloop()
+
+
+
+def askForStageIgnore():
+    root = Tk()
+    root.title("Stage ignore")
+    ignore_list = {s:BooleanVar() for s in STAGES}
+
+    def initiation():
+        for s in ignore_list:
+            ignore_list[s].set(stage_ignore[s])
+    initiation()
+
+    instructions = "Select the stages that should not be taken into account in statistics." \
+                   " Stage -1 is an artefacts stage which means that an eeg record was corrupted by artifacts," \
+                   " stage 0 is wakefulness."
+    Message(root, text=instructions, width=300).pack(anchor=W, expand=True)
+    Message(root, text="Stage: ").pack(anchor=W)
+
+    ignored_stages=Checkbar(root, ignore_list)
+    ignored_stages.pack()
+
+    def cancelAndReset():
+        initiation()
+        root.destroy()
+
+    def okClick():
+        for s in stage_ignore:
+            stage_ignore[s]=ignore_list[s].get()
+        root.destroy()
+
+    Button(root, text="Cancel", command=cancelAndReset).pack(side=RIGHT)
+    Button(root, text="Ok", command=okClick).pack(side=LEFT)
+    root.mainloop()
 
 
 if __name__ == "__main__":
     '''''''''''''''''
     # Preparing files
     '''''''''''''''''
-    root = Tk()
-    root.withdraw()
 
-    path_to_results = "Z:\\Tetervak\\21_data15_5min_20171114_101500.csv"
+    startWindow()
+
+    path_to_results = "Z:\\Tetervak\\test data1.csv"
     path_to_reports = "E:\\test\\Reports\\complete"
     results = resultReader(path_to_results)
     reports_list = reportReader(path_to_reports)
@@ -529,12 +670,11 @@ if __name__ == "__main__":
     processed_records = [(len(eeg_fragments[g]) - len([eeg for eeg in eeg_fragments[g] if eeg.stage == None])) /
                          len(eeg_fragments[g]) if len(eeg_fragments[g]) != 0 else -1 for g in eeg_fragments]
 
-    interested_files = {g: [] for g in eeg_fragments.keys()}
-    interested_files["Group 5"] = [1,2]
-    interested_files["Group 17"] = [1,3]
-    writeCSVforInterestedFiles(interested_files, eeg_fragments, save_path)
-    exit(0)
+    stage_ignore = {-1:True, 0:False, 1:False, 2:False, 3:False, 4:True, 5:True, 6:True, 7:True}
+    askForStageIgnore()
 
 
-    subPlotter(eeg_fragments, [-1,4,5,6,7],save_path)
+    subPlotter(eeg_fragments, stage_ignore,save_path)
+
+
 

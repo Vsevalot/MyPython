@@ -1,35 +1,67 @@
-import tkinter as tk
+from tkinter import Tk, Frame, LEFT, RIGHT, W, Checkbutton, Message, Button, IntVar, Canvas, PhotoImage, E, BooleanVar
+STAGES = [-1, 0, 1, 2, 3, 4, 5, 6, 7]
 
-def idk(root):
-    root.master.destroy
-
-root = tk.Tk()
-
-introduction = "This script will build histograms of stage distribution for each column in a given csv or xlsx file."
-intr = tk.Message(root, width=750, text = introduction)
-intr.config(font=(12))
-intr.grid(row = 0, ipadx = 15, ipady = 15, sticky=tk.W)
+stage_ignore = {s:True for s in STAGES}
+stage_ignore[0]=False
+stage_ignore[1]=False
+stage_ignore[2]=False
+stage_ignore[3]=False
 
 
-instructions = "Please check that all eeg fragments are named like:\n" \
-               "folder name_YYYYMMDD_hh.mm.ss(start seconds from beginning-finish seconds from beginning)\n\n" \
-               "Example:"
-inst = tk.Message(root, width=750, text = instructions)
-inst.config(font=("times", 14))
-inst.grid(row=1, ipadx = 15,sticky=tk.W)
 
 
-canvas_width = 770
-canvas_height = 142
-canvas = tk.Canvas(root, width=canvas_width, height=canvas_height, borderwidth=4, relief="groove")
-canvas.grid(row=2, padx = 10)
-img = tk.PhotoImage(file="e:\\Users\\sevamunger\\Desktop\\example.png")
-canvas.create_image(5,75, anchor=tk.W, image=img)
+def askForStageIgnore():
+    root = Tk()
+    root.title("Stage ignore")
+    ignore_list = {s:BooleanVar() for s in STAGES}
 
-continue_button = tk.Button(root, text="Exit", width=10, command=root.destroy, borderwidth=3)
-continue_button.grid(row=3, column = 0, sticky=tk.E, padx=20, pady=10)
-exit_button = tk.Button(root, text="Continue", width=16, command=idk(root) ,borderwidth=3)
-exit_button.grid(row=3, column = 0, sticky=tk.W, padx=40, pady=10)
+    def initiation():
+        for s in ignore_list:
+            ignore_list[s].set(not stage_ignore[s])
 
-root.title("EEG fragments analysis helper")
-root.mainloop()
+    initiation()
+
+    class Checkbar(Frame):
+        def __init__(self, parent, check_buttons, side=LEFT, anchor=W):
+            Frame.__init__(self, parent)
+            self.vars = []
+            for button in check_buttons:
+                chk = Checkbutton(self, text=str(button), variable=check_buttons[button])
+                chk.pack(side=side, anchor=anchor)
+                if (check_buttons[button].get()==True):
+                    chk.select()
+                self.vars.append(check_buttons[button])
+
+        def state(self):
+            return list(map(lambda var: var.get(), self.vars))
+
+
+    instructions = "Select the stages that should not be taken into account in statistics." \
+                   " Stage -1 is an artefacts stage which means that an eeg record was corrupted by artifacts," \
+                   " stage 0 is wakefulness."
+    Message(root, text=instructions, width=300).pack(anchor=W, expand=True)
+
+    Message(root, text="Stage: ").pack(anchor=W)
+    ignored_stages=Checkbar(root, ignore_list)
+    ignored_stages.pack()
+
+
+    def cancelAndReset():
+        initiation()
+        root.destroy()
+
+    def okClick():
+        for s in stage_ignore:
+            stage_ignore[s]=ignore_list[s].get()
+        root.destroy()
+
+    Button(root, text="Cancel", command=cancelAndReset).pack(side=RIGHT)
+
+    Button(root, text="Ok", command=okClick).pack(side=LEFT)
+
+    root.mainloop()
+
+
+
+askForStageIgnore()
+print(stage_ignore)
