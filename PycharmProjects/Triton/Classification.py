@@ -664,7 +664,7 @@ if __name__ == "__main__":
     '''''''''''''''''
     # Preparing files
     '''''''''''''''''
-    errMsg("Abba")
+
     startWindow()
 
     path_to_results = "Z:\\Tetervak\\21_data16_2_5min_20171116_143200.csv"
