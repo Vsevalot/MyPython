@@ -10,6 +10,7 @@ from tkinter.messagebox import showerror, showwarning
 
 def errMsg(message: str, code: int = 1):
     root = Tk()
+    root.withdraw()
     showerror("Error", message)
     root.destroy()
     exit(code)
@@ -17,6 +18,7 @@ def errMsg(message: str, code: int = 1):
 
 def warningMsg(warnings_list: list):
     root = Tk()
+    root.withdraw()
     warnings='\n'.join(warnings_list)
     msg = "During operation, the following errors occurred:\n\n" + warnings
     msg += "\n\nThese reports were not used in the statistic."
@@ -24,6 +26,17 @@ def warningMsg(warnings_list: list):
     root.destroy()
 
 
+'''
+Determines path where to save all files
+'''
+def savePathDeterminer(results_path):
+    if '\\' in results_path:
+        if (fileFromPath(results_path) != results_path.split('\\')[-2]):
+            return '.'.join(results_path.split('.')[:-1])
+        return '\\'.join(results_path.split('\\')[:-1])
+    if (fileFromPath(results_path) != results_path.split('/')[-2]):
+        return '.'.join(results_path.split('.')[:-1])
+    return '/'.join(results_path.split('/')[:-1])
 
 
 '''
@@ -32,7 +45,7 @@ Reads results
 def resultReader(results_path: str):
     try:
         return results2Dict(readXLSX(results_path)) if results_path[-4:] == "xlsx" else\
-            results2Dict(readCSV(results_path))
+            results2Dict(readCSV(results_path)),  savePathDeterminer(results_path)
     except FileNotFoundError:
         '''''''''''''''''
         # Results file window
@@ -44,7 +57,8 @@ def resultReader(results_path: str):
         root.destroy()
         if (path == ''):
             exit(0)
-        return results2Dict(readXLSX(path)) if path[-4:] == "xlsx" else  results2Dict(readCSV(path))
+        return results2Dict(readXLSX(path)) if path[-4:] == "xlsx" else  results2Dict(readCSV(path)),\
+               savePathDeterminer(path)
 
 
 '''
@@ -66,15 +80,6 @@ def reportReader(reports_path: str ):
         if (path == ''):
             exit(0)
         return [os.path.join(path, f) for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))]
-
-
-'''
-Determines path where to save all files
-'''
-def savePathDeterminer(results_path):
-    if (fileFromPath(results_path) != results_path.split('\\')[-2]):
-        return '.'.join(results_path.split('.')[:-1])
-    return '\\'.join(results_path.split('\\')[:-1])
 
 
 '''
@@ -461,6 +466,42 @@ def recSubPlotDet(plotNumber: int):
 
 
 '''
+Window asking for ignored stages
+'''
+def askForStageIgnore():
+    root = Tk()
+    root.title("Stage ignore")
+    ignore_list = {s:BooleanVar() for s in STAGES}
+
+    def initiation():
+        for s in ignore_list:
+            ignore_list[s].set(stage_ignore[s])
+    initiation()
+
+    instructions = "Select the stages that should not be taken into account in statistics." \
+                   " Stage -1 is an artefacts stage which means that an eeg record was corrupted by artifacts," \
+                   " stage 0 is wakefulness."
+    Message(root, text=instructions, width=300).pack(anchor=W, expand=True)
+    Message(root, text="Stage: ").pack(anchor=W)
+
+    ignored_stages=Checkbar(root, ignore_list)
+    ignored_stages.pack()
+
+    def cancelAndReset():
+        initiation()
+        root.destroy()
+
+    def okClick():
+        for s in stage_ignore:
+            stage_ignore[s]=ignore_list[s].get()
+        root.destroy()
+
+    Button(root, text="Cancel", command=cancelAndReset).pack(side=RIGHT)
+    Button(root, text="Ok", command=okClick).pack(side=LEFT)
+    root.mainloop()
+
+
+'''
 Plots histograms for each non empty group and save them to the result's folder
 '''
 def subPlotter(eeg: dict, stage_ignore: dict, save_path: str):
@@ -581,7 +622,9 @@ def subPlotter(eeg: dict, stage_ignore: dict, save_path: str):
     plt.savefig(save_path+"\\HIST.jpg", dpi=300)
 
 
-
+'''
+Start window frame
+'''
 def startWindow():
     def endProg():
         root.destroy()
@@ -617,51 +660,17 @@ def startWindow():
 
 
 
-def askForStageIgnore():
-    root = Tk()
-    root.title("Stage ignore")
-    ignore_list = {s:BooleanVar() for s in STAGES}
-
-    def initiation():
-        for s in ignore_list:
-            ignore_list[s].set(stage_ignore[s])
-    initiation()
-
-    instructions = "Select the stages that should not be taken into account in statistics." \
-                   " Stage -1 is an artefacts stage which means that an eeg record was corrupted by artifacts," \
-                   " stage 0 is wakefulness."
-    Message(root, text=instructions, width=300).pack(anchor=W, expand=True)
-    Message(root, text="Stage: ").pack(anchor=W)
-
-    ignored_stages=Checkbar(root, ignore_list)
-    ignored_stages.pack()
-
-    def cancelAndReset():
-        initiation()
-        root.destroy()
-
-    def okClick():
-        for s in stage_ignore:
-            stage_ignore[s]=ignore_list[s].get()
-        root.destroy()
-
-    Button(root, text="Cancel", command=cancelAndReset).pack(side=RIGHT)
-    Button(root, text="Ok", command=okClick).pack(side=LEFT)
-    root.mainloop()
-
-
 if __name__ == "__main__":
     '''''''''''''''''
     # Preparing files
     '''''''''''''''''
-
+    errMsg("Abba")
     startWindow()
 
-    path_to_results = "Z:\\Tetervak\\test data1.csv"
-    path_to_reports = "E:\\test\\Reports\\complete"
-    results = resultReader(path_to_results)
+    path_to_results = "Z:\\Tetervak\\21_data16_2_5min_20171116_143200.csv"
+    path_to_reports = "Z:\\Tetervak\\Reports\\complete"
+    results, save_path = resultReader(path_to_results)
     reports_list = reportReader(path_to_reports)
-    save_path = savePathDeterminer(path_to_results)
 
 
     eeg_fragments = matfiles2eegFragments(results, reports_list)  # returns the dictionary of eeg objects
