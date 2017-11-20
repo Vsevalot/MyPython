@@ -8,6 +8,13 @@ from tkinter.filedialog import askopenfilename
 from tkinter.filedialog import askdirectory
 from tkinter.messagebox import showerror, showwarning
 
+
+STAGES = [-1, 0, 1, 2, 3, 4, 5, 6, 7]
+STAGE_NAMES = ["Artifacts", "Wakefulness", "First stage", "Second stage", "Third stage", "Fourth stage", "Fifth stage",
+         "Sixth stage", "Seventh stage"]
+
+
+
 def errMsg(message: str, code: int = 1):
     root = Tk()
     root.withdraw()
@@ -112,16 +119,16 @@ def reportTime(string_time: str, report_path: str):  # convert string to time in
         if (len(t) == 5) or (len(t) == 6):
             return datetime.datetime(year, month, day, int(t[:-4]), int(t[-4:-2]),
                                      int(t[-2:]))  # if time 12:33:00 in format 123300
-        return "Something goes wrong, check time format of: " + report_path + ' ' + ''.join(t)
+        return "Wrong time format " +  ''.join(t)
     if (len(t) == 2):  # if there is one delimiter in the time
         if (len(t[0]) == 2 or len(t[0]) == 1) and len(t[1]) == 2:
             return datetime.datetime(year, month, day, int(t[0]), int(t[1]), 00)
-        return "Something goes wrong, check time format of: " + report_path + ' ' + ''.join(t)
+        return "Wrong time format " + ''.join(t)
     if (len(t) == 3):  # if there are two delimiters in the time
         if (len(t[0]) == 2 or len(t[0]) == 1) and len(t[1]) == 2 and len(t[2]) == 2:
             return datetime.datetime(year, month, day, int(t[0]), int(t[1]), int(t[2]))
-        return "Something goes wrong, check time format of: " + report_path + ' ' + ''.join(t)
-    return "Something goes wrong, check time format of: " + report_path + ' ' + ''.join(t)
+        return "Wrong time format " + ''.join(t)
+    return "Wrong time format " + ''.join(t)
 
 
 '''
@@ -173,20 +180,8 @@ def readCSV(csv_path: str) -> list:  # read any CSV file and return it like list
             if lines[line][-1][-1] == '\n':
                 lines[line][-1] = lines[line][-1][:-1]
 
-        ignore = ['\t', ' ']
-        for i in range(len(lines)):
-            for k in range(len(lines[i])):
-                if lines[i][k] in ignore:
-                    lines[i][k] = ''
-
-        empty_line = True
-        while (empty_line):  # remove all empty lines
-            for value in lines[-1]:
-                if (value != ''):
-                    empty_line = False
-            if (empty_line):
-                del lines[-1]
-
+        if lines==[]:
+            return []
         data = [[value[i] for value in lines] for i in
                 range(len(lines[0]))]  # transpose the list to make columns elements of the list
         return data
@@ -219,13 +214,9 @@ def results2Dict(results: list) -> dict:  # convert values from "'abc'\n" to "ab
     five_minutes=True
     for i in range(len(results)):
         for k in range(len(results[i])):
+            results[i][k] = results[i][k].replace("'", '')
+            results[i][k] = results[i][k].replace("\t", '')
             if results[i][k] != '':
-                if results[i][k][0] == "'":
-                    results[i][k] = results[i][k][1:]
-                if results[i][k][-1] == "'":
-                    results[i][k] = results[i][k][:-1]
-                if results[i][k][0] == "\t":
-                    results[i][k] = results[i][k][1:]
                 time = results[i][k].split('(')[-1].split(')')[0]
                 if len(time.split('-')) == 1:
                     time_interval = False
@@ -264,10 +255,14 @@ class EEG_Fragment(object):  # contain name of the eeg fragment, stage and ketam
         self.report_name = report
 
 
+
 class Record(object):  # one line in a report ( 11:37:53 | 3 | Artifacts )
     def __init__(self, report_path: str, time: str, stage: str, comment: str = None):
         self.time = reportTime(time, report_path)
-        self.stage = int(stage)
+        if stage in [str(s) for s in STAGES]:
+            self.stage = int(stage)
+        else:
+            self.stage = "Unknown stage: " + stage
         self.comment = comment
 
 
@@ -276,7 +271,10 @@ class Report(object):  # a list of records, with name, date and ketamine drugs
         for i in range(1, len(self.records), 1):
             if self.records[i].time < self.records[i - 1].time:
                 self.correct_report = False
-                self.reason = "Incorrect time order: " + str(self.records[i].time) + '->' + str(self.records[i - 1].time)
+                first_time = str(self.records[i - 1].time.time())
+                second_time = str(self.records[i].time.time())
+                self.reason = "Incorrect time order: " + first_time + '->' + second_time
+
 
 
     def __init__(self, report_path, csv):
@@ -285,6 +283,11 @@ class Report(object):  # a list of records, with name, date and ketamine drugs
             self.ketamine = True
         else:
             self.ketamine = False
+
+        if len(csv) < 2 or len(csv) > 3:
+            self.correct_report = False
+            self.reason = "Report should have 2 or 3 columns, got " + str(len(csv)) + " instead"
+            return
 
         self.records = []
         for i in range(len(csv[0])):
@@ -301,6 +304,10 @@ class Report(object):  # a list of records, with name, date and ketamine drugs
                 self.correct_report = False
                 self.reason = rec.time
                 break
+            if type(rec.stage) != int:
+                self.correct_report = False
+                self.reason = rec.stage
+                break
 
 
         if self.correct_report:
@@ -308,8 +315,8 @@ class Report(object):  # a list of records, with name, date and ketamine drugs
                 seconds=10)  # pick first time for 10 seconds earlier to allow 12:22:01 mat file find 12:21:59 record
             self.records[-1].time += datetime.timedelta(
                 seconds=10)  # pick last time for 10 seconds later to allow 12:22:59 mat file find 12:23:01 record
-        self.day_time = self.records[0].time
-        self.chronoChecker()
+            self.day_time = self.records[0].time
+            self.chronoChecker()
 
 
 class Checkbar(Frame):
@@ -327,10 +334,6 @@ class Checkbar(Frame):
         return list(map(lambda var: var.get(), self.vars))
 
 
-
-STAGES = [-1, 0, 1, 2, 3, 4, 5, 6, 7]
-STAGE_NAMES = ["Artifacts", "Wakefulness", "First stage", "Second stage", "Third stage", "Fourth stage", "Fifth stage",
-         "Sixth stage", "Seventh stage"]
 
 '''
 Finds stage for the matfile in the reports. If not found returns EEG_Fragment with None stage
@@ -368,7 +371,7 @@ def getStage(matfile: str, reports: list):
 Takes a dictionary of matfiles lists and returns dictionary of EEG_Fragments
 '''
 def matfiles2eegFragments(results: dict, reports_list: list):
-    reports = [Report(report, readCSV(report)) for report in reports_list]
+    reports = [Report(report, readCSV(report)) for report in reports_list if report!=[]]
     correct_reports = [r for r in reports  if r.correct_report == True]
     incorrect_reports = [r for r in reports if r.correct_report == False]
     group_names = list(results.keys())
@@ -680,6 +683,7 @@ if __name__ == "__main__":
                          len(eeg_fragments[g]) if len(eeg_fragments[g]) != 0 else -1 for g in eeg_fragments]
 
     stage_ignore = {-1:True, 0:False, 1:False, 2:False, 3:False, 4:True, 5:True, 6:True, 7:True}
+    exit(12)
     askForStageIgnore()
 
 

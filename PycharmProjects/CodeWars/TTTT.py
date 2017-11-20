@@ -1,2 +1,1 @@
-a="12345"
-print(a[:3])
+print("asd\wwdwa")
