@@ -27,8 +27,8 @@ def warningMsg(warnings_list: list):
     root = Tk()
     root.withdraw()
     warnings='\n'.join(warnings_list)
-    msg = "During operation, the following errors occurred:\n\n" + warnings
-    msg += "\n\nThese reports were not used in the statistic."
+    msg = "During operation, the following errors occurred:\n\n{}\n\n" \
+          "These reports were not used in the statistic.".format(warnings)
     showwarning("Warning", msg)
     root.destroy()
 
@@ -119,16 +119,16 @@ def reportTime(string_time: str, report_path: str):  # convert string to time in
         if (len(t) == 5) or (len(t) == 6):
             return datetime.datetime(year, month, day, int(t[:-4]), int(t[-4:-2]),
                                      int(t[-2:]))  # if time 12:33:00 in format 123300
-        return "Wrong time format " +  ''.join(t)
+        return ' '.join(["Wrong time format", ''.join(t)])
     if (len(t) == 2):  # if there is one delimiter in the time
         if (len(t[0]) == 2 or len(t[0]) == 1) and len(t[1]) == 2:
             return datetime.datetime(year, month, day, int(t[0]), int(t[1]), 00)
-        return "Wrong time format " + ''.join(t)
+        return ' '.join(["Wrong time format", ''.join(t)])
     if (len(t) == 3):  # if there are two delimiters in the time
         if (len(t[0]) == 2 or len(t[0]) == 1) and len(t[1]) == 2 and len(t[2]) == 2:
             return datetime.datetime(year, month, day, int(t[0]), int(t[1]), int(t[2]))
-        return "Wrong time format " + ''.join(t)
-    return "Wrong time format " + ''.join(t)
+        return ' '.join(["Wrong time format", ''.join(t)])
+    return ' '.join(["Wrong time format", ''.join(t)])
 
 
 '''
@@ -253,7 +253,6 @@ class EEG_Fragment(object):  # contain name of the eeg fragment, stage and ketam
         self.ketamine = ketamine
         self.name = matfile_name
         self.report_name = report
-
 
 
 class Record(object):  # one line in a report ( 11:37:53 | 3 | Artifacts )

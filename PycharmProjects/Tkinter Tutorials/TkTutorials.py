@@ -1,67 +1,114 @@
-from tkinter import Tk, Frame, LEFT, RIGHT, W, Checkbutton, Message, Button, IntVar, Canvas, PhotoImage, E, BooleanVar
-STAGES = [-1, 0, 1, 2, 3, 4, 5, 6, 7]
+import matplotlib
 
-stage_ignore = {s:True for s in STAGES}
-stage_ignore[0]=False
-stage_ignore[1]=False
-stage_ignore[2]=False
-stage_ignore[3]=False
+matplotlib.use("TkAgg")
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2TkAgg
+from matplotlib.figure import Figure
 
+import tkinter as tk
+from tkinter import ttk
 
-
-
-def askForStageIgnore():
-    root = Tk()
-    root.title("Stage ignore")
-    ignore_list = {s:BooleanVar() for s in STAGES}
-
-    def initiation():
-        for s in ignore_list:
-            ignore_list[s].set(not stage_ignore[s])
-
-    initiation()
-
-    class Checkbar(Frame):
-        def __init__(self, parent, check_buttons, side=LEFT, anchor=W):
-            Frame.__init__(self, parent)
-            self.vars = []
-            for button in check_buttons:
-                chk = Checkbutton(self, text=str(button), variable=check_buttons[button])
-                chk.pack(side=side, anchor=anchor)
-                if (check_buttons[button].get()==True):
-                    chk.select()
-                self.vars.append(check_buttons[button])
-
-        def state(self):
-            return list(map(lambda var: var.get(), self.vars))
+LARGE_FONT = ("Verdana", 12)
 
 
-    instructions = "Select the stages that should not be taken into account in statistics." \
-                   " Stage -1 is an artefacts stage which means that an eeg record was corrupted by artifacts," \
-                   " stage 0 is wakefulness."
-    Message(root, text=instructions, width=300).pack(anchor=W, expand=True)
+class SeaofBTCapp(tk.Tk):
+    def __init__(self, *args, **kwargs):
+        tk.Tk.__init__(self, *args, **kwargs)
 
-    Message(root, text="Stage: ").pack(anchor=W)
-    ignored_stages=Checkbar(root, ignore_list)
-    ignored_stages.pack()
+        tk.Tk.iconbitmap(self, default="clienticon.ico")
+        tk.Tk.wm_title(self, "Sea of BTC client")
+
+        container = tk.Frame(self)
+        container.pack(side="top", fill="both", expand=True)
+        container.grid_rowconfigure(0, weight=1)
+        container.grid_columnconfigure(0, weight=1)
+
+        self.frames = {}
+
+        for F in (StartPage, PageOne, PageTwo, PageThree):
+            frame = F(container, self)
+
+            self.frames[F] = frame
+
+            frame.grid(row=0, column=0, sticky="nsew")
+
+        self.show_frame(StartPage)
+
+    def show_frame(self, cont):
+        frame = self.frames[cont]
+        frame.tkraise()
 
 
-    def cancelAndReset():
-        initiation()
-        root.destroy()
+class StartPage(tk.Frame):
+    def __init__(self, parent, controller):
+        tk.Frame.__init__(self, parent)
+        label = tk.Label(self, text="Start Page", font=LARGE_FONT)
+        label.pack(pady=10, padx=10)
 
-    def okClick():
-        for s in stage_ignore:
-            stage_ignore[s]=ignore_list[s].get()
-        root.destroy()
+        button = ttk.Button(self, text="Visit Page 1",
+                            command=lambda: controller.show_frame(PageOne))
+        button.pack()
 
-    Button(root, text="Cancel", command=cancelAndReset).pack(side=RIGHT)
+        button2 = ttk.Button(self, text="Visit Page 2",
+                             command=lambda: controller.show_frame(PageTwo))
+        button2.pack()
 
-    Button(root, text="Ok", command=okClick).pack(side=LEFT)
+        button3 = ttk.Button(self, text="Graph Page",
+                             command=lambda: controller.show_frame(PageThree))
+        button3.pack()
 
-    root.mainloop()
+
+class PageOne(tk.Frame):
+    def __init__(self, parent, controller):
+        tk.Frame.__init__(self, parent)
+        label = tk.Label(self, text="Page One!!!", font=LARGE_FONT)
+        label.pack(pady=10, padx=10)
+
+        button1 = ttk.Button(self, text="Back to Home",
+                             command=lambda: controller.show_frame(StartPage))
+        button1.pack()
+
+        button2 = ttk.Button(self, text="Page Two",
+                             command=lambda: controller.show_frame(PageTwo))
+        button2.pack()
 
 
+class PageTwo(tk.Frame):
+    def __init__(self, parent, controller):
+        tk.Frame.__init__(self, parent)
+        label = tk.Label(self, text="Page Two!!!", font=LARGE_FONT)
+        label.pack(pady=10, padx=10)
 
-askForStageIgnore()
-print(stage_ignore)
+        button1 = ttk.Button(self, text="Back to Home",
+                             command=lambda: controller.show_frame(StartPage))
+        button1.pack()
+
+        button2 = ttk.Button(self, text="Page One",
+                             command=lambda: controller.show_frame(PageOne))
+        button2.pack()
+
+
+class PageThree(tk.Frame):
+    def __init__(self, parent, controller):
+        tk.Frame.__init__(self, parent)
+        label = tk.Label(self, text="Graph Page!", font=LARGE_FONT)
+        label.pack(pady=10, padx=10)
+
+        button1 = ttk.Button(self, text="Back to Home",
+                             command=lambda: controller.show_frame(StartPage))
+        button1.pack()
+
+        f = Figure(figsize=(5, 5), dpi=100)
+        a = f.add_subplot(111)
+        a.plot([1, 2, 3, 4, 5, 6, 7, 8], [5, 6, 1, 3, 8, 9, 3, 5])
+
+        canvas = FigureCanvasTkAgg(f, self)
+        canvas.show()
+        canvas.get_tk_widget().pack(side=tk.BOTTOM, fill=tk.BOTH, expand=True)
+
+        toolbar = NavigationToolbar2TkAgg(canvas, self)
+        toolbar.update()
+        canvas._tkcanvas.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+
+
+app = SeaofBTCapp()
+app.mainloop()

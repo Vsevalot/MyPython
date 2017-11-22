@@ -19,4 +19,5 @@ def next_bigger(number):
 
 
 
+
 print(next_bigger(144))
