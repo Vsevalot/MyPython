@@ -18,7 +18,10 @@ def pressure_calc(d_w, v, a ): # d_b - diameter of the wide part of the vessel, 
     narrow_w = 8 * v * 2 / (math.pi * ((d_w/2)*a) ** 4)
     y.append(y[-1] - narrow_w * I)
     y.append(y[-1] - wide_w * I)
-    return y
+    if y[-1]>0:
+        return y
+    else:
+        return [v - y[-1] for v in y]
 
 def vessel_calc(a):
     y_high = [0.95]*2
@@ -40,8 +43,8 @@ ax = fig.add_subplot(211)
 
 
 [pressure] = ax.plot(x, pressure_calc(diameter_w, viscosity, alpha), linewidth=2, color='red')
-ax.set_xlim([0, 10])
-ax.set_ylabel("Pressure")
+ax.set_xlim(0, 10)
+ax.set_ylabel("Pressure, mmHg")
 ax.set_title("Vessel pressure")
 plt.setp(ax.get_xticklabels(), visible=False)
 
@@ -50,9 +53,9 @@ vessel_model = fig.add_subplot(212)
 x_vessel = [0,4,4,6,6,10]
 [vessel_l] = vessel_model.plot(x_vessel, vessel_calc(alpha)[0], linewidth=2, color='red')
 [vessel_h] = vessel_model.plot(x_vessel, vessel_calc(alpha)[1], linewidth=2, color='red')
-vessel_model.set_xlim([0, 10])
+vessel_model.set_xlim(0, 10)
 vessel_model.axis(visible = False)
-vessel_model.set_ylim([0, 1])
+vessel_model.set_ylim(0, 1)
 vessel_model.set_title("Vessel view")
 vessel_model.arrow(0, 0.5, 3, 0, head_width=0.15, head_length=0.15, linewidth=1,  fc='red', ec='red')
 vessel_model.text(1, 0.55 ,"Blood flow")
@@ -69,7 +72,7 @@ viscosity_slider_ax  = fig.add_axes([0.25, 0.10, 0.65, 0.03])
 viscosity_slider = Slider(viscosity_slider_ax, 'Viscosity ', 0.5, 10, valinit=viscosity)
 
 alpha_slider_ax  = fig.add_axes([0.25, 0.15, 0.65, 0.03])
-alpha_slider = Slider(alpha_slider_ax, 'Alpha ', 0.05, 1, valinit=alpha)
+alpha_slider = Slider(alpha_slider_ax, 'Alpha (d/D) ', 0.05, 1, valinit=alpha)
 
 
 def sliders_on_changed(val):
