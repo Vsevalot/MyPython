@@ -1,114 +1,88 @@
-import matplotlib
-
-matplotlib.use("TkAgg")
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2TkAgg
-from matplotlib.figure import Figure
-
 import tkinter as tk
 from tkinter import ttk
 
 LARGE_FONT = ("Verdana", 12)
 
 
-class SeaofBTCapp(tk.Tk):
+class ClassificationApp(tk.Tk):
     def __init__(self, *args, **kwargs):
+
         tk.Tk.__init__(self, *args, **kwargs)
 
-        tk.Tk.iconbitmap(self, default="clienticon.ico")
-        tk.Tk.wm_title(self, "Sea of BTC client")
+        tk.Tk.iconbitmap(self)
+        tk.Tk.wm_title(self,"EEG classification")
 
         container = tk.Frame(self)
-        container.pack(side="top", fill="both", expand=True)
+        container.pack(side = "top", fill = "both", expand = True)
         container.grid_rowconfigure(0, weight=1)
         container.grid_columnconfigure(0, weight=1)
 
         self.frames = {}
 
-        for F in (StartPage, PageOne, PageTwo, PageThree):
-            frame = F(container, self)
-
-            self.frames[F] = frame
-
-            frame.grid(row=0, column=0, sticky="nsew")
+        for f in (StartPage, PageOne, PageTwo):
+            frame = f(container, self)
+            self.frames[f] = frame
+            frame.grid(row = 0, column = 0, sticky = "nsew")
 
         self.show_frame(StartPage)
+
 
     def show_frame(self, cont):
         frame = self.frames[cont]
         frame.tkraise()
 
 
+
+def call_leroy(caller):
+    print("{} calls Leroy Jinkins!".format(caller))
+
 class StartPage(tk.Frame):
+
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent)
-        label = tk.Label(self, text="Start Page", font=LARGE_FONT)
-        label.pack(pady=10, padx=10)
+        label = tk.Label(self, text = "Start page", font = LARGE_FONT)
+        label.pack(padx = 10, pady = 10)
 
-        button = ttk.Button(self, text="Visit Page 1",
-                            command=lambda: controller.show_frame(PageOne))
-        button.pack()
+        go_1_button = ttk.Button(self, text = "Go to the first page",
+                                command = lambda: controller.show_frame(PageOne))
+        go_1_button.pack()
 
-        button2 = ttk.Button(self, text="Visit Page 2",
-                             command=lambda: controller.show_frame(PageTwo))
-        button2.pack()
-
-        button3 = ttk.Button(self, text="Graph Page",
-                             command=lambda: controller.show_frame(PageThree))
-        button3.pack()
+        go_2_button = ttk.Button(self, text = "Go to the second page",
+                                command = lambda: controller.show_frame(PageTwo))
+        go_2_button.pack()
 
 
 class PageOne(tk.Frame):
+
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent)
-        label = tk.Label(self, text="Page One!!!", font=LARGE_FONT)
-        label.pack(pady=10, padx=10)
+        label = tk.Label(self, text = "First page", font = LARGE_FONT)
+        label.pack(padx = 10, pady = 10)
 
-        button1 = ttk.Button(self, text="Back to Home",
-                             command=lambda: controller.show_frame(StartPage))
-        button1.pack()
+        go_2_button = ttk.Button(self, text = "Go the 2 page",
+                                command = lambda: controller.show_frame(PageTwo))
+        go_2_button.pack()
 
-        button2 = ttk.Button(self, text="Page Two",
-                             command=lambda: controller.show_frame(PageTwo))
-        button2.pack()
+        home_button = ttk.Button(self, text = "Go home, you're drunk",
+                                command = lambda: controller.show_frame(StartPage))
+        home_button.pack()
 
 
 class PageTwo(tk.Frame):
+
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent)
-        label = tk.Label(self, text="Page Two!!!", font=LARGE_FONT)
-        label.pack(pady=10, padx=10)
+        label = tk.Label(self, text = "Second page", font = LARGE_FONT)
+        label.pack(padx = 10, pady = 10)
 
-        button1 = ttk.Button(self, text="Back to Home",
-                             command=lambda: controller.show_frame(StartPage))
-        button1.pack()
+        go_1_button = ttk.Button(self, text = "Go the 1 page",
+                                command = lambda: controller.show_frame(PageOne))
+        go_1_button.pack()
 
-        button2 = ttk.Button(self, text="Page One",
-                             command=lambda: controller.show_frame(PageOne))
-        button2.pack()
-
-
-class PageThree(tk.Frame):
-    def __init__(self, parent, controller):
-        tk.Frame.__init__(self, parent)
-        label = tk.Label(self, text="Graph Page!", font=LARGE_FONT)
-        label.pack(pady=10, padx=10)
-
-        button1 = ttk.Button(self, text="Back to Home",
-                             command=lambda: controller.show_frame(StartPage))
-        button1.pack()
-
-        f = Figure(figsize=(5, 5), dpi=100)
-        a = f.add_subplot(111)
-        a.plot([1, 2, 3, 4, 5, 6, 7, 8], [5, 6, 1, 3, 8, 9, 3, 5])
-
-        canvas = FigureCanvasTkAgg(f, self)
-        canvas.show()
-        canvas.get_tk_widget().pack(side=tk.BOTTOM, fill=tk.BOTH, expand=True)
-
-        toolbar = NavigationToolbar2TkAgg(canvas, self)
-        toolbar.update()
-        canvas._tkcanvas.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+        home_button = ttk.Button(self, text = "Go home, you're drunk",
+                                command = lambda: controller.show_frame(StartPage))
+        home_button.pack()
 
 
-app = SeaofBTCapp()
+app = ClassificationApp()
 app.mainloop()
