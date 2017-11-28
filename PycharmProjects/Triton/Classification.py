@@ -503,6 +503,23 @@ def askForStageIgnore():
     root.mainloop()
 
 
+
+
+def getWorkingStages(eeg_fragments: dict, stage_ignore: dict):
+    stages_stat = {}
+    working_stages = [stage for stage in STAGES if stage not in stage_ignore]
+    for group in eeg_fragments:
+        stages_stat[group] = {stage:0 for stage in STAGES if stage not in stage_ignore}
+        for eeg_fragment in eeg_fragments:
+            if eeg_fragment.stage in working_stages:
+                stages_stat[eeg_fragment.stage]+=1
+        if stages_stat[group] == {stage:0 for stage in STAGES if stage not in stage_ignore}:
+            stages_stat.pop(group, None)
+    return stages_stat
+
+
+
+
 '''
 Plots histograms for each non empty group and save them to the result's folder
 '''
