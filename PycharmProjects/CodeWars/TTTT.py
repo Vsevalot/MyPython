@@ -1,25 +1,44 @@
-import matplotlib.pyplot as plt
-import matplotlib.animation as animation
-from matplotlib import style
+from tkinter import *
+from tkinter import ttk
 
-style.use("ggplot")
+root = Tk()
 
-fig = plt.figure()
-ax1 = fig.add_subplot(1,1,1)
+content = ttk.Frame(root, padding=(3,3,12,12))
+frame = ttk.Frame(content, borderwidth=5, relief="sunken", width=200, height=100)
+namelbl = ttk.Label(content, text="Name")
+name = ttk.Entry(content)
 
-def animate(i):
-    graph_data = open("e:\\Users\\sevamunger\\Desktop\\testData.txt").read()
-    lines = graph_data.split('\n')
-    x = []
-    y = []
-    for line in lines:
-        if len(line)<1:
-            continue
-        x.append(int(line.split(',')[0]))
-        y.append(int(line.split(',')[1]))
+onevar = BooleanVar()
+twovar = BooleanVar()
+threevar = BooleanVar()
 
-    ax1.clear()
-    ax1.plot(x,y)
+onevar.set(True)
+twovar.set(False)
+threevar.set(True)
 
-ani = animation.FuncAnimation(fig, animate, interval=1000)
-plt.show()
+one = ttk.Checkbutton(content, text="One", variable=onevar, onvalue=True)
+two = ttk.Checkbutton(content, text="Two", variable=twovar, onvalue=True)
+three = ttk.Checkbutton(content, text="Three", variable=threevar, onvalue=True)
+ok = ttk.Button(content, text="Okay")
+cancel = ttk.Button(content, text="Cancel")
+
+content.grid(column=0, row=0, sticky=(N, S, E, W))
+frame.grid(column=0, row=0, columnspan=3, rowspan=2, sticky=(N, S, E, W))
+namelbl.grid(column=3, row=0, columnspan=2, sticky=(N, W), padx=5)
+name.grid(column=3, row=1, columnspan=2, sticky=(N, E, W), pady=5, padx=5)
+one.grid(column=0, row=3)
+two.grid(column=1, row=3)
+three.grid(column=2, row=3)
+ok.grid(column=3, row=3)
+cancel.grid(column=4, row=3)
+
+root.columnconfigure(0, weight=1)
+root.rowconfigure(0, weight=1)
+content.columnconfigure(0, weight=3)
+content.columnconfigure(1, weight=3)
+content.columnconfigure(2, weight=3)
+content.columnconfigure(3, weight=1)
+content.columnconfigure(4, weight=1)
+content.rowconfigure(1, weight=1)
+
+root.mainloop()

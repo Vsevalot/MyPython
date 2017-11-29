@@ -9,9 +9,13 @@ from tkinter import ttk
 
 style.use("ggplot")
 LARGE_FONT = ("Verdana", 12)
+MEDIUM_FONT = ("Calibre", 12)
 
 
-class ClassificationApp(tk.Tk):
+RESULTS_OK = 1
+
+
+class EegClassificationApp(tk.Tk):
     def __init__(self, *args, **kwargs):
 
         tk.Tk.__init__(self, *args, **kwargs)
@@ -40,29 +44,75 @@ class ClassificationApp(tk.Tk):
 
 
 
-def call_leroy(caller):
-    print("{} calls Leroy Jinkins!".format(caller))
-
 class StartPage(tk.Frame):
 
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent)
-        label = tk.Label(self, text = "Start page", font = LARGE_FONT)
-        label.pack(padx = 10, pady = 10)
 
-        text = tk.Message()
+        introduction = "This script will build pie charts of stage distribution for each classification" \
+                       " group in a given csv or xlsx file"
+        intr = ttk.Label(self, text=introduction, font = LARGE_FONT)
+        intr.pack(side = tk.TOP,  anchor=tk.W, padx = 15, pady = 5)
 
-        go_1_button = ttk.Button(self, text = "Go to the first page",
-                                command = lambda: controller.show_frame(PageOne))
-        go_1_button.pack()
 
-        go_2_button = ttk.Button(self, text = "Go to the second page",
-                                command = lambda: controller.show_frame(PageTwo))
-        go_2_button.pack()
+        instructions_1 = "Please check that all eeg fragments are named like:\n" \
+                       '"folder name_YYYYMMDD_hh.mm.ss(start seconds from beginning-finish seconds from beginning)"\n' \
+                         'or "rec number_hh.mm.ss(start seconds from beginning-finish seconds from beginning)"' \
+                         '\n\nExample:\n'
+        inst1 = ttk.Label(self, text=instructions_1, font = MEDIUM_FONT)
+        inst1.pack(side = tk.TOP,  anchor=tk.W, padx = 15, pady = 0)
 
-        go_3_button = ttk.Button(self, text = "Go to the third page",
-                                command = lambda: controller.show_frame(PageThree))
-        go_3_button.pack()
+
+        first_example = tk.PhotoImage(file="e:\\Users\\sevamunger\\Desktop\\example.png")
+        canvas1 = tk.Canvas(self, width=770, height=142, borderwidth=4, relief="groove")
+        canvas1.create_image(0, 75, anchor=tk.W, image=first_example)
+        canvas1.image = first_example
+        canvas1.pack(side = tk.TOP,  anchor=tk.W, padx = 15)
+
+        check_img = tk.PhotoImage(file="e:\\Users\\sevamunger\\Desktop\\no.png")
+        if RESULTS_OK:
+            check_img = tk.PhotoImage(file="e:\\Users\\sevamunger\\Desktop\\ok.png")
+        canvas11 = tk.Canvas(self, width=38, height=36)
+        canvas11.create_image(0, 18, anchor=tk.W, image=check_img)
+        canvas11.image = check_img
+        canvas11.pack(side = tk.TOP, anchor=tk.W, padx = 15, pady = 5)
+
+        results_text = "No file found, give the way to the analysis file"
+        if RESULTS_OK:
+            results_text = "Results file selected"
+        r_txt = ttk.Label(self, text=results_text, font = MEDIUM_FONT)
+        r_txt.pack(side = tk.TOP, anchor=tk.W, padx = 15, pady = 0)
+
+
+
+        instructions_2 = '\nExample:\n'
+        inst2 = ttk.Label(self, text=instructions_2, font = MEDIUM_FONT)
+        inst2.pack(side = tk.TOP, anchor=tk.W, padx = 15, pady = 0)
+
+
+        second_example = tk.PhotoImage(file="e:\\Users\\sevamunger\\Desktop\\example.png")
+        canvas2 = tk.Canvas(self, width=770, height=142, borderwidth=4, relief="groove")
+        canvas2.create_image(5, 75, anchor=tk.W, image=second_example)
+        canvas2.image = second_example
+        canvas2.pack(side = tk.TOP,  anchor=tk.W, padx = 15)
+
+
+        def change():
+            global RESULTS_OK
+            RESULTS_OK = not RESULTS_OK
+            check_img = tk.PhotoImage(file="e:\\Users\\sevamunger\\Desktop\\no.png")
+            if RESULTS_OK:
+                check_img = tk.PhotoImage(file="e:\\Users\\sevamunger\\Desktop\\ok.png")
+            canvas11.create_image(0, 18, anchor=tk.W, image=check_img)
+            canvas11.image = check_img
+            canvas11.pack(side=tk.TOP, anchor=tk.W, padx=15, pady=5)
+
+
+
+        continue_button = ttk.Button(self, text="change", width=10, command=change)
+        continue_button.pack()
+        exit_button = ttk.Button(self, text="Continue", width=16, command=lambda: controller.show_frame(PageTwo))
+        exit_button.pack()
 
 
 class PageOne(tk.Frame):
@@ -138,5 +188,5 @@ class PageThree(tk.Frame):
         canvas._tkcanvas.pack(side = tk.TOP, fill = tk.BOTH, expand = True)
 
 
-app = ClassificationApp()
+app = EegClassificationApp()
 app.mainloop()
