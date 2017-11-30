@@ -17,21 +17,16 @@ RESULTS_OK = 1
 
 class EegClassificationApp(tk.Tk):
     def __init__(self, *args, **kwargs):
-
         tk.Tk.__init__(self, *args, **kwargs)
-
         tk.Tk.iconbitmap(self)
         tk.Tk.wm_title(self,"EEG classification")
-
-        container = tk.Frame(self)
-        container.pack(side = "top", fill = "both", expand = True)
-        container.grid_rowconfigure(0, weight=1)
-        container.grid_columnconfigure(0, weight=1)
-
+        main_frame = tk.Frame(self)
+        #container.pack(side = "top", fill = "both", expand = True)
+        main_frame.grid(row = 0, column = 0, sticky = (tk.N, tk.S, tk.E, tk.W))
         self.frames = {}
 
         for f in (StartPage, PageOne, PageTwo, PageThree):
-            frame = f(container, self)
+            frame = f(main_frame, self)
             self.frames[f] = frame
             frame.grid(row = 0, column = 0, sticky = "nsew")
 
@@ -44,57 +39,58 @@ class EegClassificationApp(tk.Tk):
 
 
 
+
 class StartPage(tk.Frame):
-
     def __init__(self, parent, controller):
-        tk.Frame.__init__(self, parent)
+        master_wiget = tk.Frame.__init__(self, parent)
+        #master_wiget.grid(column=0, row=0, sticky=(tk.N, tk.S, tk.E, tk.W))
 
-        introduction = "This script will build pie charts of stage distribution for each classification" \
+        introduction_txt = "This script will build pie charts of stage distribution for each classification" \
                        " group in a given csv or xlsx file"
-        intr = ttk.Label(self, text=introduction, font = LARGE_FONT)
-        intr.pack(side = tk.TOP,  anchor=tk.W, padx = 15, pady = 5)
+        introduction = tk.Label(master_wiget, text=introduction_txt, font = LARGE_FONT ,width=60, height=1)
+        introduction.grid(column=0, row=0, columnspan=4, sticky=(tk.N,tk.W))
+        print(introduction.winfo_height())
 
 
-        instructions_1 = "Please check that all eeg fragments are named like:\n" \
+        instructions_txt = "Please check that all eeg fragments are named like:\n" \
                        '"folder name_YYYYMMDD_hh.mm.ss(start seconds from beginning-finish seconds from beginning)"\n' \
                          'or "rec number_hh.mm.ss(start seconds from beginning-finish seconds from beginning)"' \
                          '\n\nExample:\n'
-        inst1 = ttk.Label(self, text=instructions_1, font = MEDIUM_FONT)
-        inst1.pack(side = tk.TOP,  anchor=tk.W, padx = 15, pady = 0)
+        instructions = tk.Label(master_wiget, text=instructions_txt, font = MEDIUM_FONT)
+        instructions.grid(column=0, row=1, columnspan=4, sticky=(tk.N,tk.W))
+        print(instructions.winfo_height())
 
 
         first_example = tk.PhotoImage(file="e:\\Users\\sevamunger\\Desktop\\example.png")
-        canvas1 = tk.Canvas(self, width=770, height=142, borderwidth=4, relief="groove")
-        canvas1.create_image(0, 75, anchor=tk.W, image=first_example)
-        canvas1.image = first_example
-        canvas1.pack(side = tk.TOP,  anchor=tk.W, padx = 15)
+        canvas_results = tk.Canvas(master_wiget, width=350, height=142, borderwidth=4, relief="groove")
+        canvas_results.create_image(0, 75, anchor=tk.W, image=first_example)
+        canvas_results.image = first_example
+        canvas_results.grid(column=0, row=2, columnspan=2, sticky=(tk.N,tk.W))
+
+        second_example = tk.PhotoImage(file="e:\\Users\\sevamunger\\Desktop\\example.png")
+        canvas_reports = tk.Canvas(master_wiget, width=350, height=142, borderwidth=4, relief="groove")
+        canvas_reports.create_image(5, 75, anchor=tk.W, image=second_example)
+        canvas_reports.image = second_example
+        canvas_reports.grid(column=3, row=2, columnspan=2, sticky=(tk.N,tk.W))
+
+
 
         check_img = tk.PhotoImage(file="e:\\Users\\sevamunger\\Desktop\\no.png")
         if RESULTS_OK:
             check_img = tk.PhotoImage(file="e:\\Users\\sevamunger\\Desktop\\ok.png")
-        canvas11 = tk.Canvas(self, width=38, height=36)
-        canvas11.create_image(0, 18, anchor=tk.W, image=check_img)
-        canvas11.image = check_img
-        canvas11.pack(side = tk.TOP, anchor=tk.W, padx = 15, pady = 5)
+        canvas_results_state = tk.Canvas(master_wiget, width=38, height=36)
+        canvas_results_state.create_image(0, 18, anchor=tk.W, image=check_img)
+        canvas_results_state.image = check_img
+        canvas_results_state.grid(column=0, row=3, sticky=(tk.W))
 
         results_text = "No file found, give the way to the analysis file"
         if RESULTS_OK:
             results_text = "Results file selected"
-        r_txt = ttk.Label(self, text=results_text, font = MEDIUM_FONT)
-        r_txt.pack(side = tk.TOP, anchor=tk.W, padx = 15, pady = 0)
+        res_txt = tk.Label(master_wiget, text=results_text, font = MEDIUM_FONT)
+        res_txt.grid(column=1, row=3, columnspan=2, sticky=(tk.W))
 
 
 
-        instructions_2 = '\nExample:\n'
-        inst2 = ttk.Label(self, text=instructions_2, font = MEDIUM_FONT)
-        inst2.pack(side = tk.TOP, anchor=tk.W, padx = 15, pady = 0)
-
-
-        second_example = tk.PhotoImage(file="e:\\Users\\sevamunger\\Desktop\\example.png")
-        canvas2 = tk.Canvas(self, width=770, height=142, borderwidth=4, relief="groove")
-        canvas2.create_image(5, 75, anchor=tk.W, image=second_example)
-        canvas2.image = second_example
-        canvas2.pack(side = tk.TOP,  anchor=tk.W, padx = 15)
 
 
         def change():
@@ -103,16 +99,16 @@ class StartPage(tk.Frame):
             check_img = tk.PhotoImage(file="e:\\Users\\sevamunger\\Desktop\\no.png")
             if RESULTS_OK:
                 check_img = tk.PhotoImage(file="e:\\Users\\sevamunger\\Desktop\\ok.png")
-            canvas11.create_image(0, 18, anchor=tk.W, image=check_img)
-            canvas11.image = check_img
-            canvas11.pack(side=tk.TOP, anchor=tk.W, padx=15, pady=5)
+            canvas_results_state.create_image(0, 18, anchor=tk.W, image=check_img)
+            canvas_results_state.image = check_img
+            canvas_results_state.grid(column=0, row=3, sticky=(tk.W))
 
 
 
-        continue_button = ttk.Button(self, text="change", width=10, command=change)
-        continue_button.pack()
-        exit_button = ttk.Button(self, text="Continue", width=16, command=lambda: controller.show_frame(PageTwo))
-        exit_button.pack()
+        continue_button = tk.Button(master_wiget, text="change", width=10, command=change)
+        continue_button.grid(column=0, row=5, columnspan=2, sticky=(tk.W))
+        exit_button = tk.Button(master_wiget, text="Continue", width=16, command=lambda: controller.show_frame(PageTwo))
+        exit_button.grid(column=2, row=5, columnspan=2, sticky=(tk.W))
 
 
 class PageOne(tk.Frame):
