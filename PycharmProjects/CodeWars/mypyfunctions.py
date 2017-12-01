@@ -3,6 +3,7 @@ import datetime
 import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.widgets
+from matplotlib.figure import Figure
 from tkinter import Tk, Frame, LEFT, RIGHT, W, Checkbutton, Message, Button, BooleanVar, Canvas, PhotoImage, E
 from tkinter.filedialog import askopenfilename
 from tkinter.filedialog import askdirectory
@@ -370,9 +371,8 @@ def getStage(matfile: str, reports: list):
 Takes a dictionary of matfiles lists and returns dictionary of EEG_Fragments
 '''
 def matfiles2eegFragments(results: dict, reports_list: list):
-    reports = [Report(report, readCSV(report)) for report in reports_list if report!=[]]
-    correct_reports = [r for r in reports  if r.correct_report == True]
-    incorrect_reports = [r for r in reports if r.correct_report == False]
+    correct_reports = [r for r in reports_list  if r.correct_report == True]
+    incorrect_reports = [r for r in reports_list if r.correct_report == False]
     group_names = list(results.keys())
     for group in group_names:
         for matfile in range(len(results[group])):
@@ -505,18 +505,58 @@ def askForStageIgnore():
 
 
 
-def getWorkingStages(eeg_fragments: dict, stage_ignore: dict):
+def eegStat(eeg_fragments: dict):
     stages_stat = {}
-    working_stages = [stage for stage in STAGES if stage not in stage_ignore]
     for group in eeg_fragments:
-        stages_stat[group] = {stage:0 for stage in STAGES if stage not in stage_ignore}
-        for eeg_fragment in eeg_fragments:
-            if eeg_fragment.stage in working_stages:
-                stages_stat[eeg_fragment.stage]+=1
-        if stages_stat[group] == {stage:0 for stage in STAGES if stage not in stage_ignore}:
+        stages_stat[group] = {stage:0 for stage in STAGES}
+        stages_stat[group][None] = 0
+        for eeg_fragment in eeg_fragments[group]:
+                stages_stat[group][eeg_fragment.stage]+=1
+
+        empty_group = True
+        for stage in stages_stat[group]:
+            if stages_stat[group][stage] != 0:
+                empty_group = False
+                break
+        if empty_group:
             stages_stat.pop(group, None)
     return stages_stat
 
+
+
+
+def eerCounter(stages_stat):
+    group_errs={}
+    for group in stages_stat:
+        group_errs[group]=0
+        stages_stat[group].pop(None, None)
+        if stages_stat[group] == {stage: 0 for stage in STAGES}:
+            continue
+        for stage in stages_stat[group]:
+            mult = abs(max(stages_stat[group], key=stages_stat[group].get)-int(stage))
+            stage_val = stages_stat[group][stage]
+            stage_sum = sum([stages_stat[group][v] for v in stages_stat[group]])
+            group_errs[group] += mult*stage_val/stage_sum
+        group_errs[group]=round(group_errs[group],4)
+    return group_errs
+
+
+def piePlotter(stages_stat):
+    fig = Figure(dpi=100)
+    high, width = recSubPlotDet(len(stages_stat)+1)
+    i=1
+    errors = eerCounter(stages_stat)
+    total_err = round(sum([errors[g] for g in errors]),3)
+    worst_group = max(errors, key=errors.get)
+    for group in stages_stat:
+        stage_counts = [stages_stat[group][n] for n in stages_stat[group]]
+        stage_names = [stage for stage in stages_stat[group]]
+        plot = fig.add_subplot(high, width, i)
+        plot.pie(stage_counts, labels = stage_names)
+        title = "{} ; error = {}".format(group, errors[group])
+        plot.text(1, 1, title, color='g')
+        i+=1
+    return fig
 
 
 
@@ -639,71 +679,3 @@ def subPlotter(eeg: dict, stage_ignore: dict, save_path: str):
 
     matplotlib.rcParams.update({"font.size": 18})
     plt.savefig(save_path+"\\HIST.jpg", dpi=300)
-
-
-'''
-Start window frame
-'''
-def startWindow():
-    def endProg():
-        root.destroy()
-        exit(0)
-
-    root = Tk()
-    root.title("EEG fragments analysis helper")
-
-    introduction = "This script will build histograms of stage distribution for each column in a given csv or xlsx file."
-    intr = Message(root, width=750, text=introduction)
-    intr.config(font=(12))
-    intr.grid(row=0, ipadx=15, ipady=15, sticky=W)
-
-    instructions = "Please check that all eeg fragments are named like:\n" \
-                   "folder name_YYYYMMDD_hh.mm.ss(start seconds from beginning-finish seconds from beginning)\n\n" \
-                   "Example:"
-    inst = Message(root, width=750, text=instructions)
-    inst.config(font=("times", 14))
-    inst.grid(row=1, ipadx=15, sticky=W)
-
-    canvas_width = 770
-    canvas_height = 142
-    canvas = Canvas(root, width=canvas_width, height=canvas_height, borderwidth=4, relief="groove")
-    canvas.grid(row=2, padx=10)
-    img = PhotoImage(file="e:\\Users\\sevamunger\\Desktop\\example.png")
-    canvas.create_image(5, 75, anchor=W, image=img)
-
-    continue_button = Button(root, text="Exit", width=10, command=endProg, borderwidth=3)
-    continue_button.grid(row=3, column=0, sticky=E, padx=20, pady=10)
-    exit_button = Button(root, text="Continue", width=16, command=root.destroy, borderwidth=3)
-    exit_button.grid(row=3, column=0, sticky=W, padx=40, pady=10)
-    root.mainloop()
-
-
-
-if __name__ == "__main__":
-    '''''''''''''''''
-    # Preparing files
-    '''''''''''''''''
-
-    startWindow()
-
-    path_to_results = "Z:\\Tetervak\\21_data16_2_5min_20171116_143200.csv"
-    path_to_reports = "Z:\\Tetervak\\Reports\\complete"
-    results, save_path = resultReader(path_to_results)
-    reports_list = reportReader(path_to_reports)
-
-
-    eeg_fragments = matfiles2eegFragments(results, reports_list)  # returns the dictionary of eeg objects
-
-    # percentage of processed records for the each group
-    processed_records = [(len(eeg_fragments[g]) - len([eeg for eeg in eeg_fragments[g] if eeg.stage == None])) /
-                         len(eeg_fragments[g]) if len(eeg_fragments[g]) != 0 else -1 for g in eeg_fragments]
-
-    stage_ignore = {-1:True, 0:False, 1:False, 2:False, 3:False, 4:True, 5:True, 6:True, 7:True}
-
-    askForStageIgnore()
-
-
-    subPlotter(eeg_fragments, stage_ignore,save_path)
-
-
-
