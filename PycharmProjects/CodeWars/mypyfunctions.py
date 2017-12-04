@@ -542,20 +542,22 @@ def eerCounter(stages_stat):
 
 
 def piePlotter(stages_stat):
-    fig = Figure(dpi=100)
+    fig = Figure(figsize=(16,9), dpi=100)
     high, width = recSubPlotDet(len(stages_stat)+1)
     i=1
     errors = eerCounter(stages_stat)
     total_err = round(sum([errors[g] for g in errors]),3)
     worst_group = max(errors, key=errors.get)
     for group in stages_stat:
-        stage_counts = [stages_stat[group][n] for n in stages_stat[group]]
-        stage_names = [stage for stage in stages_stat[group]]
+        stage_counts = [stages_stat[group][stage] for stage in stages_stat[group] if stages_stat[group][stage]!=0]
+        stage_names = [stage for stage in stages_stat[group] if stages_stat[group][stage]!=0]
         plot = fig.add_subplot(high, width, i)
         plot.pie(stage_counts, labels = stage_names)
         title = "{} ; error = {}".format(group, errors[group])
-        plot.text(1, 1, title, color='g')
+        plot.set_title(title)
         i+=1
+    plot = fig.add_subplot(high, width, high*width)
+    fig.subplots_adjust(hspace=0.2, wspace=0.25)
     return fig
 
 

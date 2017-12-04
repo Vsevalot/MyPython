@@ -116,7 +116,7 @@ class PageThree(tk.Frame):
         y = [1,24,56,33,43,1,23,2,45]
 
         a.plot(x, y)
-        a.title("asdas")
+
 
 
         canvas = FigureCanvasTkAgg(f, self)

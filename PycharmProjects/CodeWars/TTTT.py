@@ -13,11 +13,24 @@ from tkinter import ttk
 style.use("ggplot")
 LARGE_FONT = ("Verdana", 14)
 MEDIUM_FONT = ("Calibre", 12)
-
+STAGES = [-1, 0, 1, 2, 3, 4, 5, 6, 7]
 RESULTS = 0
 REPORTS = 0
 EEG_FRAGMENTS = 0
 EEG_STAT = 0
+
+
+# root = tk.Tk()
+# x=  tk.IntVar()
+# x.set(4)
+# print(x.get())
+# exit(0)
+#
+# STAGE_IGNORE = {stage : tk.BooleanVar() for stage in STAGES}
+# for  s in STAGE_IGNORE:
+#     print(STAGE_IGNORE[s])
+#
+# exit(0)
 
 class StartPage(tk.Tk):
     def __init__(self, *args, **kwargs):
@@ -79,7 +92,8 @@ class StartPage(tk.Tk):
         def resultReader():
             global RESULTS
             path = tk.filedialog.askopenfilename(filetype=(("CSV File", "*.csv"), ("XLSX File", "*.xlsx")),
-                                   title="Choose a file with results of classification")
+                                                 title="Choose a file with results of classification",
+                                                 initialdir="Z:\\Tetervak")
             if (path == ''):
                 return
 
@@ -116,7 +130,8 @@ class StartPage(tk.Tk):
         def reportReader():
             global REPORTS
 
-            path = tk.filedialog.askdirectory(title="Choose a folder which contain reports")
+            path = tk.filedialog.askdirectory(title="Choose a folder which contain reports",
+                                              initialdir = "Z:\\Tetervak\\Reports\\complete")
             if (path == ''):
                 return
 
@@ -144,8 +159,10 @@ class StartPage(tk.Tk):
             global RESULTS
             global REPORTS
             global EEG_STAT
-            EEG_FRAGMENTS = myPy.matfiles2eegFragments(RESULTS, REPORTS)
-            EEG_STAT = myPy.eegStat(EEG_FRAGMENTS)
+            if EEG_FRAGMENTS==0:
+                EEG_FRAGMENTS = myPy.matfiles2eegFragments(RESULTS, REPORTS)
+            if EEG_STAT == 0:
+                EEG_STAT = myPy.eegStat(EEG_FRAGMENTS)
             plots = PlotPage()
             plots.mainloop()
 
@@ -166,9 +183,37 @@ class PlotPage(tk.Tk):
 
         f = myPy.piePlotter(EEG_STAT)
         canvas = FigureCanvasTkAgg(f, master_widget)
+
+
         canvas.show()
-        canvas.get_tk_widget().grid(row=0, column=0, sticky=(tk.N, tk.S, tk.E, tk.W))
-        #canvas.get_tk_widget().grid(column=0, row=2, columnspan=5, sticky=(tk.N,tk.W), padx = (10,0))
+        #canvas
+        canvas.get_tk_widget().grid(column=0, row=1, columnspan=3, sticky=(tk.N, tk.W))
+
+        toolbar = NavigationToolbar2TkAgg(canvas, self)
+        toolbar.update()
+        canvas._tkcanvas.grid(column=0, row=0, columnspan=3, sticky=(tk.N,tk.W))
+
+
+        stage_txt = "Stages:"
+        stage_label = tk.Label(master_widget, text=stage_txt, font = MEDIUM_FONT)
+        stage_label.grid(column=0, row=2, sticky=(tk.N, tk.S, tk.E, tk.W))
+
+
+        stage_boxes_txt = "There will be stage ignore check boxes"
+        stage_boxes = tk.Label(master_widget, text=stage_boxes_txt, font = MEDIUM_FONT)
+        stage_boxes.grid(column=0, row=3, sticky=(tk.N, tk.S, tk.E, tk.W))
+
+
+        apply_button = ttk.Button(master_widget, text="Apply stages", width=22, command=lambda: print("Apply"))
+        apply_button.grid(column=0, row=4, sticky=(tk.W), pady = (20, 20), padx = 5)
+        log_button = ttk.Button(master_widget, text="Files in groups", width=16, command=lambda: print("Files"))
+        log_button.grid(column=1, row=4, sticky=(tk.W), pady = (20, 20), padx = 5)
+        exit_button = ttk.Button(master_widget, text="Exit", width=10, command=lambda: print("Exit"))
+        exit_button.grid(column=2, row=4,  sticky=(tk.W))
+
+
+
+
 
 
 app = StartPage()
