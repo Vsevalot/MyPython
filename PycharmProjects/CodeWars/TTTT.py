@@ -102,7 +102,7 @@ class StartPage(tk.Tk):
             elif path[-3:] == "csv":
                 RESULTS = myPy.results2Dict(myPy.readCSV(path))
             else:
-                print("How did you get there?")
+                print("How did you get here?")
                 exit(0)
 
 
@@ -183,15 +183,8 @@ class PlotPage(tk.Tk):
 
         f = myPy.piePlotter(EEG_STAT)
         canvas = FigureCanvasTkAgg(f, master_widget)
-
-
-        canvas.show()
-        #canvas
         canvas.get_tk_widget().grid(column=0, row=1, columnspan=3, sticky=(tk.N, tk.W))
-
-        toolbar = NavigationToolbar2TkAgg(canvas, self)
-        toolbar.update()
-        canvas._tkcanvas.grid(column=0, row=0, columnspan=3, sticky=(tk.N,tk.W))
+        canvas.show()
 
 
         stage_txt = "Stages:"
@@ -210,8 +203,6 @@ class PlotPage(tk.Tk):
         log_button.grid(column=1, row=4, sticky=(tk.W), pady = (20, 20), padx = 5)
         exit_button = ttk.Button(master_widget, text="Exit", width=10, command=lambda: print("Exit"))
         exit_button.grid(column=2, row=4,  sticky=(tk.W))
-
-
 
 
 

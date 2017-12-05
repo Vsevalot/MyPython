@@ -1,54 +1,56 @@
 import matplotlib
 matplotlib.use('TkAgg')
-import numpy as np
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+
+from numpy import arange, sin, pi
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2TkAgg
+# implement the default mpl key bindings
+from matplotlib.backend_bases import key_press_handler
+
+
 from matplotlib.figure import Figure
-from tkinter import *
+
+import sys
+if sys.version_info[0] < 3:
+    import Tkinter as Tk
+else:
+    import tkinter as Tk
+
+root = Tk.Tk()
+root.wm_title("Embedding in TK")
 
 
-'''
+f = Figure(figsize=(5, 4), dpi=100)
+a = f.add_subplot(111)
+t = arange(0.0, 3.0, 0.01)
+s = sin(2*pi*t)
 
-import pandas as pd
-df = pd.read_csv('prob25.csv', header=None, index_col=0, names=['x', 'y', 'idx'])
-df
-         x        y  idx
-1  19.0070  35.7500    1
-2   4.4447   6.0735    2
+a.plot(t, s)
 
 
+# a tk.DrawingArea
+canvas = FigureCanvasTkAgg(f, master=root)
+canvas.show()
+canvas.get_tk_widget().pack(side=Tk.TOP, fill=Tk.BOTH, expand=1)
 
-'''
+toolbar = NavigationToolbar2TkAgg(canvas, root)
+toolbar.update()
+canvas._tkcanvas.pack(side=Tk.TOP, fill=Tk.BOTH, expand=1)
 
 
+def on_key_event(event):
+    print('you pressed %s' % event.key)
+    key_press_handler(event, canvas, toolbar)
 
-class mclass:
-    def __init__(self,  window):
-        self.window = window
-        self.box = Entry(window)
-        self.button = Button (window, text="check", command=self.plot)
-        self.box.pack ()
-        self.button.pack()
+canvas.mpl_connect('key_press_event', on_key_event)
 
-    def plot (self):
-        x=np.array ([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
-        v= np.array ([16,16.31925,17.6394,16.003,17.2861,17.3131,19.1259,18.9694,22.0003,22.81226])
-        p= np.array ([16.23697,     17.31653,     17.22094,     17.68631,     17.73641 ,    18.6368,
-            19.32125,     19.31756 ,    21.20247  ,   22.41444   ,  22.11718  ,   22.12453])
 
-        fig = Figure(figsize=(6,6))
-        a = fig.add_subplot(111)
-        a.scatter(v,x,color='red')
-        a.plot(p, range(2 +max(x)),color='blue')
-        a.invert_yaxis()
+def _quit():
+    root.quit()     # stops mainloop
+    root.destroy()  # this is necessary on Windows to prevent
+                    # Fatal Python Error: PyEval_RestoreThread: NULL tstate
 
-        a.set_title ("Estimation Grid", fontsize=16)
-        a.set_ylabel("Y", fontsize=14)
-        a.set_xlabel("X", fontsize=14)
+button = Tk.Button(master=root, text='Quit', command=_quit)
+button.pack(side=Tk.BOTTOM)
 
-        canvas = FigureCanvasTkAgg(fig, master=self.window)
-        canvas.get_tk_widget().pack()
-        canvas.draw()
+Tk.mainloop()
 
-window= Tk()
-start= mclass (window)
-window.mainloop()

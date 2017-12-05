@@ -542,7 +542,7 @@ def eerCounter(stages_stat):
 
 
 def piePlotter(stages_stat):
-    fig = Figure(figsize=(16,9), dpi=100)
+    fig = Figure(figsize=(12.3,6.9), dpi=100)
     high, width = recSubPlotDet(len(stages_stat)+1)
     i=1
     errors = eerCounter(stages_stat)
