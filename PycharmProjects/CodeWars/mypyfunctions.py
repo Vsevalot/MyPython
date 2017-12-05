@@ -529,19 +529,30 @@ def eerCounter(stages_stat):
     group_errs={}
     for group in stages_stat:
         group_errs[group]=0
-        stages_stat[group].pop(None, None)
-        if stages_stat[group] == {stage: 0 for stage in STAGES}:
-            continue
+        if stages_stat[group] == {stage: 0 for stage in stages_stat[group]}:
+            continue # pass the group if this is an empty group
+        stage_sum = sum([stages_stat[group][stage] for stage in stages_stat[group]])
         for stage in stages_stat[group]:
-            mult = abs(max(stages_stat[group], key=stages_stat[group].get)-int(stage))
-            stage_val = stages_stat[group][stage]
-            stage_sum = sum([stages_stat[group][v] for v in stages_stat[group]])
-            group_errs[group] += mult*stage_val/stage_sum
+            # Error = the distance between stages * count of records in this stage / sum of all records in the group
+            multiplier = abs(max(stages_stat[group], key=stages_stat[group].get)-int(stage))
+            stage_value = stages_stat[group][stage]
+            group_errs[group] += multiplier*stage_value/stage_sum
         group_errs[group]=round(group_errs[group],4)
     return group_errs
 
 
-def piePlotter(stages_stat):
+def piePlotter(stages_stat, stage_show):
+    # Remove all invisible stages
+    for stage in stage_show:
+        if stage_show[stage].get() == False:
+            for group in stages_stat:
+                stages_stat[group].pop(stage, None)
+
+    for group in list(stages_stat.keys()):
+        if stages_stat[group] == {stage: 0 for stage in stages_stat[group]}:
+            stages_stat.pop(group, None)
+
+
     fig = Figure(figsize=(12.3,6.9), dpi=100)
     high, width = recSubPlotDet(len(stages_stat)+1)
     i=1
@@ -554,10 +565,24 @@ def piePlotter(stages_stat):
         plot = fig.add_subplot(high, width, i)
         plot.pie(stage_counts, labels = stage_names)
         title = "{} ; error = {}".format(group, errors[group])
-        plot.set_title(title)
+        plot.set_title(title, fontsize=8)
         i+=1
+
     plot = fig.add_subplot(high, width, high*width)
-    fig.subplots_adjust(hspace=0.2, wspace=0.25)
+
+    all_stages_ratio = {}
+    for group in stages_stat:
+        for stage in stages_stat[group]:
+            if stage not in all_stages_ratio:
+                all_stages_ratio[stage] = 0
+            all_stages_ratio[stage] += stages_stat[group][stage]
+    all_counts = [all_stages_ratio[stage] for stage in all_stages_ratio]
+    all_names = [stage for stage in all_stages_ratio]
+
+    plot.pie(all_counts, labels = all_names)
+    title = "Total error = {} ; worst group - {}".format(total_err, worst_group)
+    plot.set_title(title, fontsize=8)
+    fig.subplots_adjust(left = 0.0, bottom = 0.05, right = 0.95, top = 0.95, hspace=0.2, wspace=0.25)
     return fig
 
 

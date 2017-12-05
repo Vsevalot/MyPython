@@ -18,19 +18,8 @@ RESULTS = 0
 REPORTS = 0
 EEG_FRAGMENTS = 0
 EEG_STAT = 0
+STAGE_SHOW = 0
 
-
-# root = tk.Tk()
-# x=  tk.IntVar()
-# x.set(4)
-# print(x.get())
-# exit(0)
-#
-# STAGE_IGNORE = {stage : tk.BooleanVar() for stage in STAGES}
-# for  s in STAGE_IGNORE:
-#     print(STAGE_IGNORE[s])
-#
-# exit(0)
 
 class StartPage(tk.Tk):
     def __init__(self, *args, **kwargs):
@@ -88,8 +77,9 @@ class StartPage(tk.Tk):
         res_txt = tk.Label(master_widget, text=results_text, font = MEDIUM_FONT)
         res_txt.grid(column=2, row=3, columnspan=7, sticky=(tk.W))
 
+
         # Add results button
-        def resultReader():
+        def resultReader(root):
             global RESULTS
             path = tk.filedialog.askopenfilename(filetype=(("CSV File", "*.csv"), ("XLSX File", "*.xlsx")),
                                                  title="Choose a file with results of classification",
@@ -97,22 +87,26 @@ class StartPage(tk.Tk):
             if (path == ''):
                 return
 
+            root.config(cursor="wait")
+            root.update()
+
             if  path[-4:] == "xlsx":
                 RESULTS = myPy.results2Dict(myPy.readXLSX(path))
             elif path[-3:] == "csv":
                 RESULTS = myPy.results2Dict(myPy.readCSV(path))
             else:
                 print("How did you get here?")
+                root.config(cursor="")
                 exit(0)
-
 
             check_img = tk.PhotoImage(file="e:\\Users\\sevamunger\\Desktop\\ok.png")
             results_text = "Results file selected"
             canvas_results_state.create_image(0, 18, anchor=tk.W, image=check_img)
             canvas_results_state.image = check_img
             res_txt.config(text = results_text)
+            root.config(cursor="")
 
-        add_results_button =  ttk.Button(master_widget, text="Add", width=10, command=resultReader)
+        add_results_button =  ttk.Button(master_widget, text="Add", width=10, command=lambda: resultReader(self))
         add_results_button.grid(column=9, row=3, sticky=(tk.W))
 
 
@@ -127,16 +121,15 @@ class StartPage(tk.Tk):
         rep_txt.grid(column=2, row=4, columnspan=7, sticky=(tk.W))
 
         # Add results button
-        def reportReader():
+        def reportReader(root):
             global REPORTS
 
             path = tk.filedialog.askdirectory(title="Choose a folder which contain reports",
                                               initialdir = "Z:\\Tetervak\\Reports\\complete")
             if (path == ''):
                 return
-
-            rep_txt.config(text="Reading files...")
-            rep_txt.grid(column=2, row=4, columnspan=7, sticky=(tk.W))
+            root.config(cursor="wait")
+            root.update()
             REPORTS = [os.path.join(path, f) for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))]
             REPORTS = [myPy.Report(report, myPy.readCSV(report)) for report in REPORTS]
 
@@ -149,8 +142,9 @@ class StartPage(tk.Tk):
             canvas_reports_state.create_image(0, 18, anchor=tk.W, image=check_img)
             canvas_reports_state.image = check_img
             rep_txt.config(text = report_text)
+            root.config(cursor="")
 
-        add_results_button =  ttk.Button(master_widget, text="Add", width=10, command=reportReader)
+        add_results_button =  ttk.Button(master_widget, text="Add", width=10, command=lambda: reportReader(self))
         add_results_button.grid(column=9, row=4, sticky=(tk.W))
 
 
@@ -159,10 +153,19 @@ class StartPage(tk.Tk):
             global RESULTS
             global REPORTS
             global EEG_STAT
-            if EEG_FRAGMENTS==0:
-                EEG_FRAGMENTS = myPy.matfiles2eegFragments(RESULTS, REPORTS)
-            if EEG_STAT == 0:
-                EEG_STAT = myPy.eegStat(EEG_FRAGMENTS)
+            global STAGE_SHOW
+
+            EEG_FRAGMENTS = myPy.matfiles2eegFragments(RESULTS, REPORTS)
+
+            EEG_STAT = myPy.eegStat(EEG_FRAGMENTS)
+
+            STAGE_SHOW = {stage: tk.BooleanVar() for stage in STAGES}
+            STAGE_SHOW[0].set(True)
+            STAGE_SHOW[1].set(True)
+            STAGE_SHOW[2].set(True)
+            STAGE_SHOW[3].set(True)
+            STAGE_SHOW[None] = tk.BooleanVar()
+
             plots = PlotPage()
             plots.mainloop()
 
@@ -181,7 +184,7 @@ class PlotPage(tk.Tk):
         master_widget.grid(row=0, column=0, sticky=(tk.N, tk.S, tk.E, tk.W))
 
 
-        f = myPy.piePlotter(EEG_STAT)
+        f = myPy.piePlotter(EEG_STAT, STAGE_SHOW)
         canvas = FigureCanvasTkAgg(f, master_widget)
         canvas.get_tk_widget().grid(column=0, row=1, columnspan=3, sticky=(tk.N, tk.W))
         canvas.show()
@@ -192,12 +195,30 @@ class PlotPage(tk.Tk):
         stage_label.grid(column=0, row=2, sticky=(tk.N, tk.S, tk.E, tk.W))
 
 
-        stage_boxes_txt = "There will be stage ignore check boxes"
-        stage_boxes = tk.Label(master_widget, text=stage_boxes_txt, font = MEDIUM_FONT)
+        class CheckBoxes(tk.Frame):
+            def __init__(self, parent, check_dict):
+                tk.Frame.__init__(self, parent)
+                self.boxes = []
+                i=0
+                for button in check_dict:
+                    chk = tk.Checkbutton(self, text=str(button), variable=check_dict[button])
+                    chk.grid(row = 0, column = i)
+                    if (check_dict[button].get() == True):
+                        chk.select()
+                    i+=1
+                    self.boxes.append(chk)
+
+        stage_boxes = CheckBoxes(master_widget, STAGE_SHOW)
         stage_boxes.grid(column=0, row=3, sticky=(tk.N, tk.S, tk.E, tk.W))
 
 
-        apply_button = ttk.Button(master_widget, text="Apply stages", width=22, command=lambda: print("Apply"))
+        def applyButton():
+            global STAGE_SHOW
+            print('\n')
+            print(stage_boxes.boxes)
+
+
+        apply_button = ttk.Button(master_widget, text="Apply stages", width=22, command=lambda: applyButton())
         apply_button.grid(column=0, row=4, sticky=(tk.W), pady = (20, 20), padx = 5)
         log_button = ttk.Button(master_widget, text="Files in groups", width=16, command=lambda: print("Files"))
         log_button.grid(column=1, row=4, sticky=(tk.W), pady = (20, 20), padx = 5)
@@ -208,4 +229,5 @@ class PlotPage(tk.Tk):
 
 
 app = StartPage()
+
 app.mainloop()
