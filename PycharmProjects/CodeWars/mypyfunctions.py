@@ -541,10 +541,10 @@ def eerCounter(stages_stat):
     return group_errs
 
 
-def piePlotter(stages_stat, stage_show):
+def piePlotter(fig, stages_stat, stage_show):
     # Remove all invisible stages
     for stage in stage_show:
-        if stage_show[stage].get() == False:
+        if stage_show[stage] == False:
             for group in stages_stat:
                 stages_stat[group].pop(stage, None)
 
@@ -553,7 +553,6 @@ def piePlotter(stages_stat, stage_show):
             stages_stat.pop(group, None)
 
 
-    fig = Figure(figsize=(12.3,6.9), dpi=100)
     high, width = recSubPlotDet(len(stages_stat)+1)
     i=1
     errors = eerCounter(stages_stat)
@@ -583,7 +582,7 @@ def piePlotter(stages_stat, stage_show):
     title = "Total error = {} ; worst group - {}".format(total_err, worst_group)
     plot.set_title(title, fontsize=8)
     fig.subplots_adjust(left = 0.0, bottom = 0.05, right = 0.95, top = 0.95, hspace=0.2, wspace=0.25)
-    return fig
+    #return fig
 
 
 
