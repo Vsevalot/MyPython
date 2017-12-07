@@ -156,8 +156,6 @@ class StartPage(tk.Tk):
 
         def makeEegFragments():
             global EEG_FRAGMENTS
-            global RESULTS
-            global REPORTS
             global EEG_STAT
 
             EEG_FRAGMENTS = myPy.matfiles2eegFragments(RESULTS, REPORTS)
@@ -180,67 +178,11 @@ class PlotPage(tk.Tk):
         master_widget = tk.Frame(self)
         master_widget.grid(row=0, column=0, sticky=(tk.N, tk.S, tk.E, tk.W))
 
-        def piePlotter(fig, stages_stat, stage_show):
-            # Remove all invisible stages
-            for stage in stage_show:
-                if stage_show[stage] == False:
-                    for group in stages_stat:
-                        stages_stat[group].pop(stage, None)
-
-            for group in list(stages_stat.keys()):
-                if stages_stat[group] == {stage: 0 for stage in stages_stat[group]}:
-                    stages_stat.pop(group, None)
-
-            high, width = myPy.recSubPlotDet(len(stages_stat) + 1)
-            i = 1
-            errors = myPy.eerCounter(stages_stat)
-            total_err = round(sum([errors[g] for g in errors]), 3)
-            worst_group = max(errors, key=errors.get)
-            for group in stages_stat:
-                stage_counts = [stages_stat[group][stage] for stage in stages_stat[group] if
-                                stages_stat[group][stage] != 0]
-                stage_names = [stage for stage in stages_stat[group] if stages_stat[group][stage] != 0]
-                plot = fig.add_subplot(high, width, i)
-                plot.pie(stage_counts, labels=stage_names)
-                title = "{} ; error = {}".format(group, errors[group])
-                plot.set_title(title, fontsize=8)
-                i += 1
-
-            plot = fig.add_subplot(high, width, high * width)
-
-            all_stages_ratio = {}
-            for group in stages_stat:
-                for stage in stages_stat[group]:
-                    if stage not in all_stages_ratio:
-                        all_stages_ratio[stage] = 0
-                    all_stages_ratio[stage] += stages_stat[group][stage]
-            all_counts = [all_stages_ratio[stage] for stage in all_stages_ratio]
-            all_names = [stage for stage in all_stages_ratio]
-
-            plot.pie(all_counts, labels=all_names)
-            title = "Total error = {} ; worst group - {}".format(total_err, worst_group)
-            plot.set_title(title, fontsize=8)
-            fig.subplots_adjust(left=0.0, bottom=0.05, right=0.95, top=0.95, hspace=0.2, wspace=0.25)
-
-##########################################
-        x = [0, 1, 2, 3, 4, 5, 6, 7, 8]
-        y = [1, 24, 56, 33, 43, 1, 23, 2, 45]
-
-        self.figure, self.plots = matplotlib.pyplot.subplots(nrows=2, ncols=2)
-
-        for i in range(len(self.plots)):
-            self.plots[i].pie(x, y)
-
+        self.figure = Figure(figsize=(12.3,6.9), dpi=100)
+        myPy.piePlotter(self.figure, EEG_STAT, STAGE_SHOW)
         canvas = FigureCanvasTkAgg(self.figure, master_widget)
         canvas.get_tk_widget().grid(column=0, row=1, columnspan=3, sticky=(tk.N, tk.W))
-        canvas.draw()
-
-
-        # self.figure = Figure(figsize=(12.3,6.9), dpi=100)
-        # piePlotter(self.figure, EEG_STAT, STAGE_SHOW)
-        # canvas = FigureCanvasTkAgg(self.figure, master_widget)
-        # canvas.get_tk_widget().grid(column=0, row=1, columnspan=3, sticky=(tk.N, tk.W))
-        # canvas.draw()
+        canvas.show()
 
 
         stage_txt = "Stages:"
@@ -277,10 +219,10 @@ class PlotPage(tk.Tk):
             for stage in STAGE_SHOW:
                 STAGE_SHOW[stage] = current_state[stage]
 
-            self.figure.clear()
+
             myPy.piePlotter(self.figure, EEG_STAT, STAGE_SHOW)
-            #canvas.get_tk_widget().grid(column=0, row=1, columnspan=3, sticky=(tk.N, tk.W))
-            canvas.draw()
+            print('Here')
+            canvas.show()
 
 
 

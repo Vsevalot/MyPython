@@ -8,6 +8,7 @@ from tkinter import Tk, Frame, LEFT, RIGHT, W, Checkbutton, Message, Button, Boo
 from tkinter.filedialog import askopenfilename
 from tkinter.filedialog import askdirectory
 from tkinter.messagebox import showerror, showwarning
+import copy
 
 
 STAGES = [-1, 0, 1, 2, 3, 4, 5, 6, 7]
@@ -503,7 +504,7 @@ def askForStageIgnore():
     root.mainloop()
 
 
-
+COLORS = {}
 
 def eegStat(eeg_fragments: dict):
     stages_stat = {}
@@ -520,12 +521,22 @@ def eegStat(eeg_fragments: dict):
                 break
         if empty_group:
             stages_stat.pop(group, None)
+
+    global COLORS
+    COLORS = {stage:0 for stage in stages_stat[list(stages_stat.keys())[0]]}
+    colors = ["#636568", "#d5deed", "#b8cdef", "#90b3ed", "#608edb",
+              "#1d68e5", "#2f7bbf", "#872fbf", "#bf2fa9", "#bf2f6d"]
+    c = 0
+    for stage in COLORS:
+        COLORS[stage] = colors[c]
+        c+=1
     return stages_stat
 
 
 
 
-def eerCounter(stages_stat):
+def eerCounter(stages_stat_):
+    stages_stat = copy.deepcopy(stages_stat_)
     group_errs={}
     for group in stages_stat:
         group_errs[group]=0
@@ -533,7 +544,12 @@ def eerCounter(stages_stat):
             continue # pass the group if this is an empty group
         stage_sum = sum([stages_stat[group][stage] for stage in stages_stat[group]])
         for stage in stages_stat[group]:
+            if stage is None:
+                continue
             # Error = the distance between stages * count of records in this stage / sum of all records in the group
+            if max(stages_stat[group], key=stages_stat[group].get) is None:
+                group_errs[group] = 0
+                continue
             multiplier = abs(max(stages_stat[group], key=stages_stat[group].get)-int(stage))
             stage_value = stages_stat[group][stage]
             group_errs[group] += multiplier*stage_value/stage_sum
@@ -541,7 +557,22 @@ def eerCounter(stages_stat):
     return group_errs
 
 
-def piePlotter(fig, stages_stat, stage_show):
+def explodeCalc(stages):
+    if len(stages) == 0:
+        return (0)
+    index_of_max = stages.index(max(stages))
+    explodes = []
+    for i in range(len(stages)):
+        explodes.append(0.1)
+        if (i==index_of_max):
+            explodes[i]=0
+    return tuple(explodes)
+
+def piePlotter(fig, stages_stat_, stage_show_):
+    fig.clf()
+    stages_stat = copy.deepcopy(stages_stat_)
+    stage_show = copy.deepcopy(stage_show_)
+
     # Remove all invisible stages
     for stage in stage_show:
         if stage_show[stage] == False:
@@ -561,8 +592,11 @@ def piePlotter(fig, stages_stat, stage_show):
     for group in stages_stat:
         stage_counts = [stages_stat[group][stage] for stage in stages_stat[group] if stages_stat[group][stage]!=0]
         stage_names = [stage for stage in stages_stat[group] if stages_stat[group][stage]!=0]
+        colors = [COLORS[stage] for stage in COLORS if stage in stage_names]
+        explodes = explodeCalc(stage_counts)
         plot = fig.add_subplot(high, width, i)
-        plot.pie(stage_counts, labels = stage_names)
+        plot.pie(stage_counts, colors = colors,  labels = stage_names, startangle = 90,
+                 shadow = True, explode = explodes, autopct = lambda: print("1"))
         title = "{} ; error = {}".format(group, errors[group])
         plot.set_title(title, fontsize=8)
         i+=1
@@ -579,129 +613,10 @@ def piePlotter(fig, stages_stat, stage_show):
     all_names = [stage for stage in all_stages_ratio]
 
     plot.pie(all_counts, labels = all_names)
-    title = "Total error = {} ; worst group - {}".format(total_err, worst_group)
+    title = "Total error = {} \nThe worst group - {}".format(total_err, worst_group)
     plot.set_title(title, fontsize=8)
+    plt.legend()
     fig.subplots_adjust(left = 0.0, bottom = 0.05, right = 0.95, top = 0.95, hspace=0.2, wspace=0.25)
-    #return fig
 
 
 
-'''
-Plots histograms for each non empty group and save them to the result's folder
-'''
-def subPlotter(eeg: dict, stage_ignore: dict, save_path: str):
-    if not os.path.exists(save_path):
-        os.makedirs(save_path)
-
-    local_stages = [stage for stage in STAGES if stage not in [int(stage) for stage in stage_ignore if
-                                                               stage_ignore[stage]==True]]
-
-    sum_of_fragments = sum([len([fragment for fragment in eeg[group] if (fragment.stage is not None) and
-                                 (fragment.stage in local_stages)]) for group in eeg])
-
-    bar_values = {group: {stage: len([fragment.stage for fragment in eeg[group] if fragment.stage == stage])
-                          for stage in local_stages} for group in eeg}
-
-    for group in bar_values:
-        if all(bar_values[group][stage] == 0 for stage in bar_values[group]):
-            bar_values[group]=None
-    bar_values={group:bar_values[group] for group in bar_values if bar_values[group] is not None}
-
-    bar_per = {group: [round(100*bar_values[group][n]/sum_of_fragments, 2) for n in bar_values[group]]
-               for group in bar_values if bar_values[group]!={s: 0 for s in local_stages}}
-
-    all_stages = [round(100*sum([bar_values[group][stage] for group in bar_values])/sum_of_fragments,2)
-                  for stage in local_stages]
-
-
-    group_errs={}
-    for group in bar_values:
-        group_errs[group]=0
-        for stage in bar_values[group]:
-            mult = abs(max(bar_values[group], key=bar_values[group].get)-int(stage))
-            stage_val = bar_values[group][stage]
-            stage_sum = sum([bar_values[group][v] for v in bar_values[group]])
-            group_errs[group] += mult*stage_val/stage_sum
-        group_errs[group]=round(group_errs[group],4)
-    total_err = round(sum([group_errs[g] for g in group_errs]),3)
-    worst_group = max(group_errs, key=group_errs.get)
-
-
-
-    def checkBarWindow():
-        root = Tk()
-        root.title("Reports generating")
-
-        instructions = "Select the elements in the groups for which you want to generate reports" \
-                       " with the names of the files"
-        Message(root, text=instructions, width=240).pack(anchor=W)
-
-        groups = list(bar_values.keys())
-        groups = {group: {str(stage): BooleanVar() for stage in local_stages} for group in groups}
-
-
-        interested_stages = []
-        for group in groups:
-            Message(root, text=group, width=100).pack(anchor=W)
-            interested_stages.append(Checkbar(root, groups[group]))
-            interested_stages[-1].pack()
-
-        def cancelAndReset():
-            for g in groups:
-                for s in groups[g]:
-                    groups[g][s].set(False)
-            root.destroy()
-
-        Button(root, text="Cancel", command=cancelAndReset).pack(side=RIGHT)
-
-        Button(root, text="Ok", command=root.destroy).pack(side=LEFT)
-
-        root.mainloop()
-
-        for g in groups:
-            for s in groups[g]:
-                groups[g][s] = groups[g][s].get()
-
-        return {g: [int(stage) for stage in groups[g] if groups[g][stage]==True] for g in groups}
-
-
-    '''
-    Plotting
-    '''
-    high, width=recSubPlotDet(len(bar_values)+1)
-
-
-    plt.figure(figsize=(40.0, 25.0))
-    i=1
-    for group in bar_per:
-        sbplt=plt.subplot(high,width,i)
-        plt.bar(local_stages,bar_per[group],align="center")
-        title = group + " ; error = " + str (group_errs[group])
-        plt.title(title)
-        plt.ylabel("Percentage")
-        sbplt.set_xticks([tick-0.0 for tick in local_stages])
-        sbplt.set_xticklabels([str(s) for s in local_stages])
-        plt.axis([ local_stages[0]-0.5,  local_stages[-1]+0.5, 0,100])
-        for k in range(len(local_stages)):
-            sbplt.text(local_stages[k]-0.40, bar_per[group][k] + 0.35, str(bar_per[group][k]), color="blue")
-        i+=1
-
-    sbplt=plt.subplot(high, width, high*width)
-    plt.bar(local_stages,all_stages, color='g',align="center")
-    err_text = "Total error = " + str(total_err) +  ", the worst group - " + worst_group
-    plt.text(-1,110, err_text)
-    plt.title("Total stages ratio")
-    plt.ylabel("Percentage")
-    sbplt.set_xticks([tick - 0.0 for tick in local_stages])
-    sbplt.set_xticklabels([str(s) for s in local_stages])
-    plt.axis([local_stages[0] - 0.5, local_stages[-1] + 0.5, 0, 100])
-    for k in range(len(local_stages)):
-        sbplt.text(local_stages[k] - 0.40, all_stages[k] + 0.35, str(all_stages[k]), color='g')
-    plt.subplots_adjust(hspace=0.3)
-    plt.show(block=False)
-    interested_files = checkBarWindow()
-
-    writeCSVforInterestedFiles(interested_files, eeg_fragments, save_path)
-
-    matplotlib.rcParams.update({"font.size": 18})
-    plt.savefig(save_path+"\\HIST.jpg", dpi=300)

@@ -111,11 +111,13 @@ class PageThree(tk.Frame):
         home_button.pack()
 
         f = Figure(figsize=(5,5), dpi=100)
-        a = f.add_subplot(111)
+        a = f.add_subplot(2,1,1)
+
         x = [0,1,2,3,4,5,6,7,8]
         y = [1,24,56,33,43,1,23,2,45]
-
         a.plot(x, y)
+        b = f.add_subplot(2,1,2)
+        b.plot(x,y)
 
 
 
@@ -124,6 +126,8 @@ class PageThree(tk.Frame):
         canvas.get_tk_widget().pack(side = tk.BOTTOM, expand = True)
 
         def upDate():
+            f.clf()
+            a = f.add_subplot(2,1,1)
             x.append(x[-1] + 1)
             y.append(int(y[-1] * 1.3))
             a.clear()
