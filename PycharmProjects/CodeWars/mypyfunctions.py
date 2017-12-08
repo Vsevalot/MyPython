@@ -12,9 +12,10 @@ import copy
 
 
 STAGES = [-1, 0, 1, 2, 3, 4, 5, 6, 7]
-STAGE_NAMES = ["Artifacts", "Wakefulness", "First stage", "Second stage", "Third stage", "Fourth stage", "Fifth stage",
-         "Sixth stage", "Seventh stage"]
-
+STAGE_NAMES = ["Artifacts", "Wakefulness", "1 stage", "2 stage", "3 stage", "4 stage", "5 stage",
+         "6 stage", "7 stage"]
+STAGE_NAMES = {STAGES[i]: STAGE_NAMES[i] for i in range(len(STAGES))}
+STAGE_NAMES[None] = "Not used"
 
 
 def errMsg(message: str, code: int = 1):
@@ -468,42 +469,6 @@ def recSubPlotDet(plotNumber: int):
     return factors[0], factors[1]
 
 
-'''
-Window asking for ignored stages
-'''
-def askForStageIgnore():
-    root = Tk()
-    root.title("Stage ignore")
-    ignore_list = {s:BooleanVar() for s in STAGES}
-
-    def initiation():
-        for s in ignore_list:
-            ignore_list[s].set(stage_ignore[s])
-    initiation()
-
-    instructions = "Select the stages that should not be taken into account in statistics." \
-                   " Stage -1 is an artefacts stage which means that an eeg record was corrupted by artifacts," \
-                   " stage 0 is wakefulness."
-    Message(root, text=instructions, width=300).pack(anchor=W, expand=True)
-    Message(root, text="Stage: ").pack(anchor=W)
-
-    ignored_stages=Checkbar(root, ignore_list)
-    ignored_stages.pack()
-
-    def cancelAndReset():
-        initiation()
-        root.destroy()
-
-    def okClick():
-        for s in stage_ignore:
-            stage_ignore[s]=ignore_list[s].get()
-        root.destroy()
-
-    Button(root, text="Cancel", command=cancelAndReset).pack(side=RIGHT)
-    Button(root, text="Ok", command=okClick).pack(side=LEFT)
-    root.mainloop()
-
-
 COLORS = {}
 
 def eegStat(eeg_fragments: dict):
@@ -531,8 +496,6 @@ def eegStat(eeg_fragments: dict):
         COLORS[stage] = colors[c]
         c+=1
     return stages_stat
-
-
 
 
 def eerCounter(stages_stat_):
@@ -568,6 +531,15 @@ def explodeCalc(stages):
             explodes[i]=0
     return tuple(explodes)
 
+
+def make_autopct(values):
+    def my_autopct(pct):
+        total = sum(values)
+        val = int(round(pct*total/100.0))
+        return '{p:.2f}%  ({v:d})'.format(p=pct,v=val)
+    return my_autopct
+
+
 def piePlotter(fig, stages_stat_, stage_show_):
     fig.clf()
     stages_stat = copy.deepcopy(stages_stat_)
@@ -596,7 +568,7 @@ def piePlotter(fig, stages_stat_, stage_show_):
         explodes = explodeCalc(stage_counts)
         plot = fig.add_subplot(high, width, i)
         plot.pie(stage_counts, colors = colors,  labels = stage_names, startangle = 90,
-                 shadow = True, explode = explodes, autopct = lambda: print("1"))
+                 explode = explodes, autopct = '%1.1f%%')
         title = "{} ; error = {}".format(group, errors[group])
         plot.set_title(title, fontsize=8)
         i+=1
@@ -611,9 +583,12 @@ def piePlotter(fig, stages_stat_, stage_show_):
             all_stages_ratio[stage] += stages_stat[group][stage]
     all_counts = [all_stages_ratio[stage] for stage in all_stages_ratio]
     all_names = [stage for stage in all_stages_ratio]
+    colors = [COLORS[stage] for stage in COLORS if stage in all_names]
 
-    plot.pie(all_counts, labels = all_names)
-    title = "Total error = {} \nThe worst group - {}".format(total_err, worst_group)
+    plot.pie(all_counts, labels = all_names, colors = colors)
+    err_text = "Total error = {}\nThe worst group - {}".format(total_err, worst_group)
+    plot.text(-1,-1.3, err_text, fontsize=10)
+    title = "Distribution of all stages"
     plot.set_title(title, fontsize=8)
     plt.legend()
     fig.subplots_adjust(left = 0.0, bottom = 0.05, right = 0.95, top = 0.95, hspace=0.2, wspace=0.25)

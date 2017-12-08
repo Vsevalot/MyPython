@@ -5,7 +5,7 @@ from matplotlib.figure import Figure
 from matplotlib import style
 import mypyfunctions as myPy
 import os
-import numpy as np
+import copy
 
 import tkinter as tk
 from tkinter import ttk
@@ -32,10 +32,12 @@ class StartPage(tk.Tk):
         tk.Tk.__init__(self, *args, **kwargs)
         tk.Tk.iconbitmap(self)
         tk.Tk.wm_title(self,"EEG classification")
+
+        # master_widget - main widget where all others are located
         master_widget = tk.Frame(self)
         master_widget.grid(row=0, column=0, sticky=(tk.N, tk.S, tk.E, tk.W))
-        #master_wiget.columnconfigure(1, minsize=1)
 
+        # Introduction
         introduction_txt = "This script will build pie charts of stage distribution for each classification " \
                            "group in a given csv or xlsx file. You will be able to choose which states you need " \
                            "to analyze and generate logs of file used for in each interested stage."
@@ -43,7 +45,7 @@ class StartPage(tk.Tk):
         introduction.grid(column=0, row=0, columnspan=10, sticky=(tk.N, tk.S, tk.E, tk.W), pady = (15,5))
 
 
-
+        # Instructions
         instructions_txt = "Script takes a file of results of classification where each group contain a column of " \
                            "eeg fragment's names. Please check that all eeg fragments are named like:\n" \
                            '"folder name_YYYYMMDD_hh.mm.ss(start seconds from beginning-finish seconds from beginning)"\n' \
@@ -57,13 +59,14 @@ class StartPage(tk.Tk):
         instructions.grid(column=0, row=1, columnspan=10, sticky=(tk.N, tk.S, tk.E, tk.W), padx = 10)
 
 
-
+        # Example of results
         first_example = tk.PhotoImage(file="e:\\Users\\sevamunger\\Desktop\\exampl.png")
         canvas_results = tk.Canvas(master_widget, width=350, height=142, borderwidth=4, relief="groove")
         canvas_results.create_image(0, 75, anchor=tk.W, image=first_example)
         canvas_results.image = first_example
         canvas_results.grid(column=0, row=2, columnspan=5, sticky=(tk.N,tk.W), padx = (10,0))
 
+        # Example of report
         second_example = tk.PhotoImage(file="e:\\Users\\sevamunger\\Desktop\\exampl.png")
         canvas_reports = tk.Canvas(master_widget, width=350, height=142, borderwidth=4, relief="groove")
         canvas_reports.create_image(5, 75, anchor=tk.W, image=second_example)
@@ -78,7 +81,7 @@ class StartPage(tk.Tk):
         canvas_results_state.image = no_img
         canvas_results_state.grid(column=0, row=3, sticky=(tk.E), pady = 10)
 
-        # No / Ok text
+        # Result state
         results_text = "No file found, chose a way to the analysis file"
         res_txt = tk.Label(master_widget, text=results_text, font = MEDIUM_FONT)
         res_txt.grid(column=2, row=3, columnspan=7, sticky=(tk.W))
@@ -122,6 +125,7 @@ class StartPage(tk.Tk):
         canvas_reports_state.image = no_img
         canvas_reports_state.grid(column=0, row=4, sticky=(tk.E))
 
+        # Report state
         reports_text = "No report folder detected found, give a way to the reports location"
         rep_txt = tk.Label(master_widget, text=reports_text, font = MEDIUM_FONT)
         rep_txt.grid(column=2, row=4, columnspan=7, sticky=(tk.W))
@@ -164,8 +168,11 @@ class StartPage(tk.Tk):
             plots = PlotPage()
             plots.mainloop()
 
+        # Go to plot window button
         continue_button = ttk.Button(master_widget, text="Build plots", width=16, command=makeEegFragments)
         continue_button.grid(column=2, row=5, sticky=(tk.W), pady = (20, 20), padx = 5)
+
+        # Exit app button
         exit_button = ttk.Button(master_widget, text="Exit", width=10, command=lambda: exit(0))
         exit_button.grid(column=7, row=5,  sticky=(tk.W))
 
@@ -178,7 +185,7 @@ class PlotPage(tk.Tk):
         master_widget = tk.Frame(self)
         master_widget.grid(row=0, column=0, sticky=(tk.N, tk.S, tk.E, tk.W))
 
-        self.figure = Figure(figsize=(12.3,6.9), dpi=100)
+        self.figure = Figure(figsize=(14.76, 6.6), dpi=100)
         myPy.piePlotter(self.figure, EEG_STAT, STAGE_SHOW)
         canvas = FigureCanvasTkAgg(self.figure, master_widget)
         canvas.get_tk_widget().grid(column=0, row=1, columnspan=3, sticky=(tk.N, tk.W))
@@ -187,7 +194,7 @@ class PlotPage(tk.Tk):
 
         stage_txt = "Stages:"
         stage_label = tk.Label(master_widget, text=stage_txt, font = MEDIUM_FONT)
-        stage_label.grid(column=0, row=2, sticky=(tk.N, tk.S, tk.E, tk.W))
+        stage_label.grid(column=0, row=2, sticky=(tk.N, tk.W), padx = 10)
 
 
         class CheckBoxes(tk.Frame):
@@ -209,8 +216,7 @@ class PlotPage(tk.Tk):
                 return {box: self.boxes[box].instate(['selected']) for box in self.boxes}
 
         stage_boxes = CheckBoxes(master_widget, STAGE_SHOW)
-        stage_boxes.grid(column=0, row=3, sticky=(tk.N, tk.S, tk.E, tk.W))
-
+        stage_boxes.grid(column=0, row=3, sticky=(tk.N, tk.W), padx = 10)
 
 
         def applyButton():
@@ -219,24 +225,26 @@ class PlotPage(tk.Tk):
             for stage in STAGE_SHOW:
                 STAGE_SHOW[stage] = current_state[stage]
 
-
             myPy.piePlotter(self.figure, EEG_STAT, STAGE_SHOW)
-            print('Here')
             canvas.show()
-
-
-
-
-        apply_button = ttk.Button(master_widget, text="Apply stages", width=22, command=lambda: applyButton())
+        # Apply new stages
+        apply_button = ttk.Button(master_widget, text="Apply stages", width=22, command=applyButton)
         apply_button.grid(column=0, row=4, sticky=(tk.W), pady = (20, 20), padx = 5)
+
+
+
         log_button = ttk.Button(master_widget, text="Files in groups", width=16, command=lambda: print("Files"))
         log_button.grid(column=1, row=4, sticky=(tk.W), pady = (20, 20), padx = 5)
+
+
+
         exit_button = ttk.Button(master_widget, text="Exit", width=10, command=lambda: exit(0))
         exit_button.grid(column=2, row=4,  sticky=(tk.W))
 
-
-
-
+t = copy.deepcopy(STAGE_SHOW)
 app = StartPage()
 
+if t!=STAGE_SHOW:
+    print(1)
+    t = copy.deepcopy(STAGE_SHOW)
 app.mainloop()
