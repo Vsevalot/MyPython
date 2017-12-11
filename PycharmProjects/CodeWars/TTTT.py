@@ -1,6 +1,6 @@
 import matplotlib
 matplotlib.use("TkAgg")
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2TkAgg
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 from matplotlib import style
 import mypyfunctions as myPy
@@ -16,6 +16,8 @@ LARGE_FONT = ("Verdana", 14)
 MEDIUM_FONT = ("Calibre", 12)
 STAGES = [-1, 0, 1, 2, 3, 4, 5, 6, 7]
 RESULTS = 0
+RESULTS_PATH = ""
+SAVE_PATH = ""
 REPORTS = 0
 EEG_FRAGMENTS = 0
 EEG_STAT = 0
@@ -24,7 +26,11 @@ STAGE_SHOW[0] = True
 STAGE_SHOW[1] = True
 STAGE_SHOW[2] = True
 STAGE_SHOW[3] = True
-STAGE_SHOW[None] = False
+LOG_DICT = {}
+
+
+
+
 
 
 class StartPage(tk.Tk):
@@ -90,19 +96,25 @@ class StartPage(tk.Tk):
         # Add results button
         def resultReader(root):
             global RESULTS
+            global RESULTS_PATH
+            global SAVE_PATH
             path = tk.filedialog.askopenfilename(filetype=(("CSV File", "*.csv"), ("XLSX File", "*.xlsx")),
                                                  title="Choose a file with results of classification",
                                                  initialdir="Z:\\Tetervak")
             if (path == ''):
                 return
 
+            RESULTS_PATH = myPy.pathFromName(path)
+
             root.config(cursor="wait")
             root.update()
 
             if  path[-4:] == "xlsx":
                 RESULTS = myPy.results2Dict(myPy.readXLSX(path))
+                SAVE_PATH = path[:-5]
             elif path[-3:] == "csv":
                 RESULTS = myPy.results2Dict(myPy.readCSV(path))
+                SAVE_PATH = path[:-4]
             else:
                 print("How did you get here?")
                 root.config(cursor="")
@@ -158,7 +170,9 @@ class StartPage(tk.Tk):
         add_results_button.grid(column=9, row=4, sticky=(tk.W))
 
 
-        def makeEegFragments():
+        def makeEegFragments(root):
+            root.config(cursor="wait")
+            root.update()
             global EEG_FRAGMENTS
             global EEG_STAT
 
@@ -167,9 +181,11 @@ class StartPage(tk.Tk):
             EEG_STAT = myPy.eegStat(EEG_FRAGMENTS)
             plots = PlotPage()
             plots.mainloop()
+            root.config(cursor="")
+
 
         # Go to plot window button
-        continue_button = ttk.Button(master_widget, text="Build plots", width=16, command=makeEegFragments)
+        continue_button = ttk.Button(master_widget, text="Build plots", width=16, command=lambda: makeEegFragments(self))
         continue_button.grid(column=2, row=5, sticky=(tk.W), pady = (20, 20), padx = 5)
 
         # Exit app button
@@ -181,12 +197,13 @@ class PlotPage(tk.Tk):
     def __init__(self, *args, **kwargs):
         tk.Tk.__init__(self, *args, **kwargs)
         tk.Tk.iconbitmap(self)
-        tk.Tk.wm_title(self,"Pie plots")
+        tk.Tk.wm_title(self,"Hist plots")
         master_widget = tk.Frame(self)
         master_widget.grid(row=0, column=0, sticky=(tk.N, tk.S, tk.E, tk.W))
 
         self.figure = Figure(figsize=(14.76, 6.6), dpi=100)
-        myPy.piePlotter(self.figure, EEG_STAT, STAGE_SHOW)
+        global LOG_DICT
+        LOG_DICT = myPy.histPlotter(self.figure, EEG_STAT, STAGE_SHOW)
         canvas = FigureCanvasTkAgg(self.figure, master_widget)
         canvas.get_tk_widget().grid(column=0, row=1, columnspan=3, sticky=(tk.N, tk.W))
         canvas.show()
@@ -211,7 +228,6 @@ class PlotPage(tk.Tk):
                     i+=1
 
 
-
             def state(self):
                 return {box: self.boxes[box].instate(['selected']) for box in self.boxes}
 
@@ -219,21 +235,31 @@ class PlotPage(tk.Tk):
         stage_boxes.grid(column=0, row=3, sticky=(tk.N, tk.W), padx = 10)
 
 
-        def applyButton():
+        def applyButton(root):
+            root.config(cursor="wait")
+            root.update()
             global STAGE_SHOW
             current_state = stage_boxes.state()
             for stage in STAGE_SHOW:
                 STAGE_SHOW[stage] = current_state[stage]
 
-            myPy.piePlotter(self.figure, EEG_STAT, STAGE_SHOW)
+            global LOG_DICT
+            LOG_DICT = myPy.histPlotter(self.figure, EEG_STAT, STAGE_SHOW)
             canvas.show()
+            root.config(cursor="")
         # Apply new stages
-        apply_button = ttk.Button(master_widget, text="Apply stages", width=22, command=applyButton)
+        apply_button = ttk.Button(master_widget, text="Apply stages", width=22, command=lambda: applyButton(self))
         apply_button.grid(column=0, row=4, sticky=(tk.W), pady = (20, 20), padx = 5)
 
 
+        def logButton(root):
+            root.config(cursor="wait")
+            root.update()
+            myPy.writeLogs(LOG_DICT, EEG_FRAGMENTS, SAVE_PATH)
+            root.config(cursor="")
 
-        log_button = ttk.Button(master_widget, text="Files in groups", width=16, command=lambda: print("Files"))
+
+        log_button = ttk.Button(master_widget, text="Files in groups", width=16, command=lambda: logButton(self))
         log_button.grid(column=1, row=4, sticky=(tk.W), pady = (20, 20), padx = 5)
 
 
@@ -241,10 +267,6 @@ class PlotPage(tk.Tk):
         exit_button = ttk.Button(master_widget, text="Exit", width=10, command=lambda: exit(0))
         exit_button.grid(column=2, row=4,  sticky=(tk.W))
 
-t = copy.deepcopy(STAGE_SHOW)
-app = StartPage()
 
-if t!=STAGE_SHOW:
-    print(1)
-    t = copy.deepcopy(STAGE_SHOW)
+app = StartPage()
 app.mainloop()

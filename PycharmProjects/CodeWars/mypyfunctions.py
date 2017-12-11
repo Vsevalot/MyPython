@@ -15,7 +15,15 @@ STAGES = [-1, 0, 1, 2, 3, 4, 5, 6, 7]
 STAGE_NAMES = ["Artifacts", "Wakefulness", "1 stage", "2 stage", "3 stage", "4 stage", "5 stage",
          "6 stage", "7 stage"]
 STAGE_NAMES = {STAGES[i]: STAGE_NAMES[i] for i in range(len(STAGES))}
-STAGE_NAMES[None] = "Not used"
+
+
+def pathFromName(path:str):
+    delimiter = "\\"
+    if '/' in path:
+        delimiter='/'
+    return '/'.join(path.split(delimiter)[:-1])
+
+
 
 
 def errMsg(message: str, code: int = 1):
@@ -417,14 +425,12 @@ def write2csv(twoD_list: list, file_name: str, path2save: str = ''):
 '''
 Takes a dictionary of stages for groups which files should be write to csv and save them to the result's folder
 '''
-def writeCSVforInterestedFiles(file_dict: dict, eeg: dict, save_path: str):
+def writeLogs(log_dict: dict, eeg: dict, save_path: str):
     if not os.path.exists(save_path):
         os.makedirs(save_path)
 
-    for group in file_dict:
-        if file_dict[group] == []:
-            continue
-        for stage in file_dict[group]:
+    for group in log_dict:
+        for stage in log_dict[group]:
             csv = [eeg_fragment for eeg_fragment in eeg[group] if eeg_fragment.stage == stage]
             if csv == []:
                 continue
@@ -436,10 +442,10 @@ def writeCSVforInterestedFiles(file_dict: dict, eeg: dict, save_path: str):
 
             csv = [ ["Report : " + report_name] + [eeg_fragment.name for eeg_fragment in csv
                    if eeg_fragment.report_name == report_name] for report_name in reports]
-            try:
-                write2csv(csv, group + ' stage ' + str(stage), save_path)
-            except:
-                write2csv(csv, group + ' stage ' + str(stage))
+
+            write2csv(csv, group + ' stage ' + str(stage), save_path)
+
+
 
 
 '''
@@ -475,14 +481,15 @@ def eegStat(eeg_fragments: dict):
     stages_stat = {}
     for group in eeg_fragments:
         stages_stat[group] = {stage:0 for stage in STAGES}
-        stages_stat[group][None] = 0
+        stages_stat[group][None] = 0 # eeg without report
         for eeg_fragment in eeg_fragments[group]:
                 stages_stat[group][eeg_fragment.stage]+=1
 
         empty_group = True
-        for stage in stages_stat[group]:
+        for stage in STAGES:
             if stages_stat[group][stage] != 0:
                 empty_group = False
+                stages_stat[group].pop(None, None)
                 break
         if empty_group:
             stages_stat.pop(group, None)
@@ -498,7 +505,7 @@ def eegStat(eeg_fragments: dict):
     return stages_stat
 
 
-def eerCounter(stages_stat_):
+def eerCounter(stages_stat_, log_dict):
     stages_stat = copy.deepcopy(stages_stat_)
     group_errs={}
     for group in stages_stat:
@@ -506,20 +513,19 @@ def eerCounter(stages_stat_):
         if stages_stat[group] == {stage: 0 for stage in stages_stat[group]}:
             continue # pass the group if this is an empty group
         stage_sum = sum([stages_stat[group][stage] for stage in stages_stat[group]])
+        max_stage = max(stages_stat[group], key=stages_stat[group].get)
         for stage in stages_stat[group]:
-            if stage is None:
-                continue
             # Error = the distance between stages * count of records in this stage / sum of all records in the group
-            if max(stages_stat[group], key=stages_stat[group].get) is None:
-                group_errs[group] = 0
-                continue
-            multiplier = abs(max(stages_stat[group], key=stages_stat[group].get)-int(stage))
+            multiplier = abs(max_stage-int(stage))
             stage_value = stages_stat[group][stage]
             group_errs[group] += multiplier*stage_value/stage_sum
         group_errs[group]=round(group_errs[group],4)
+        log_dict[group] = [stage for stage in stages_stat[group] if stage!=max_stage]
+
     return group_errs
 
 
+# explode for all stages except the biggest
 def explodeCalc(stages):
     if len(stages) == 0:
         return (0)
@@ -532,15 +538,8 @@ def explodeCalc(stages):
     return tuple(explodes)
 
 
-def make_autopct(values):
-    def my_autopct(pct):
-        total = sum(values)
-        val = int(round(pct*total/100.0))
-        return '{p:.2f}%  ({v:d})'.format(p=pct,v=val)
-    return my_autopct
 
-
-def piePlotter(fig, stages_stat_, stage_show_):
+def histPlotter(fig, stages_stat_, stage_show_):
     fig.clf()
     stages_stat = copy.deepcopy(stages_stat_)
     stage_show = copy.deepcopy(stage_show_)
@@ -556,22 +555,34 @@ def piePlotter(fig, stages_stat_, stage_show_):
             stages_stat.pop(group, None)
 
 
+    stages_perc = {}
+    stages_sum = sum([sum([stages_stat[group][stage] for stage in stages_stat[group]]) for group in stages_stat])
+    for group in stages_stat:
+        stages_perc[group] = {stage: round(100*(stages_stat[group][stage]/stages_sum), 2) for stage in stages_stat[group]}
+
     high, width = recSubPlotDet(len(stages_stat)+1)
     i=1
-    errors = eerCounter(stages_stat)
+    log_dict = {}
+    errors = eerCounter(stages_stat, log_dict)
     total_err = round(sum([errors[g] for g in errors]),3)
     worst_group = max(errors, key=errors.get)
     for group in stages_stat:
-        stage_counts = [stages_stat[group][stage] for stage in stages_stat[group] if stages_stat[group][stage]!=0]
-        stage_names = [stage for stage in stages_stat[group] if stages_stat[group][stage]!=0]
-        colors = [COLORS[stage] for stage in COLORS if stage in stage_names]
-        explodes = explodeCalc(stage_counts)
+        stage_positions = [stage for stage in stages_stat[group]]
+        stage_perc = [stages_perc[group][stage] for stage in stage_positions]
         plot = fig.add_subplot(high, width, i)
-        plot.pie(stage_counts, colors = colors,  labels = stage_names, startangle = 90,
-                 explode = explodes, autopct = '%1.1f%%')
+        plot.bar(stage_positions, stage_perc, color = "#608edb")
         title = "{} ; error = {}".format(group, errors[group])
-        plot.set_title(title, fontsize=8)
+        plot.set_title(title, fontsize=10)
+        plot.set_ylabel("Percentage")
+        plot.axis([stage_positions[0] - 0.5, stage_positions[-1] + 0.5, 0, 100])
+        for k in range(len(stage_positions)):
+            if stage_perc[k]==0:
+                continue
+            plot.text(stage_positions[k], stage_perc[k] + 1, str(stage_perc[k]),
+                          color="g", ha='center')
         i+=1
+
+
 
     plot = fig.add_subplot(high, width, high*width)
 
@@ -589,9 +600,10 @@ def piePlotter(fig, stages_stat_, stage_show_):
     err_text = "Total error = {}\nThe worst group - {}".format(total_err, worst_group)
     plot.text(-1,-1.3, err_text, fontsize=10)
     title = "Distribution of all stages"
-    plot.set_title(title, fontsize=8)
+    plot.set_title(title, fontsize=10)
     plt.legend()
-    fig.subplots_adjust(left = 0.0, bottom = 0.05, right = 0.95, top = 0.95, hspace=0.2, wspace=0.25)
+    fig.subplots_adjust(left = 0.05, bottom = 0.05, right = 0.95, top = 0.95, hspace=0.2, wspace=0.25)
+    return log_dict
 
 
 

@@ -1,6 +1,2 @@
-def func(**kwargs):
-    print(kwargs["abba"])
-
-
-
-func(abba = 1)
+a="asdasdasd1.xls"
+print(a[:-4])
