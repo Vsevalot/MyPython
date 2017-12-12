@@ -31,13 +31,46 @@ LOG_DICT = {}
 
 
 
+class WindowMsg(tk.Tk):
+    def __init__(self, label, message, *args, **kwargs,):
+        tk.Tk.__init__(self, *args, **kwargs)
+        tk.Tk.iconbitmap(self)
+        tk.Tk.wm_title(self, label)
+
+        master_widget = tk.Frame(self)
+        master_widget.grid(row=0, column=0, sticky=(tk.N, tk.S, tk.E, tk.W))
+
+        self.win_width = 350
+        self.win_height = 130
+        self.x = int(SCREEN_WIDTH / 2 - self.win_width / 2)
+        self.y = int(SCREEN_HEIGHT / 2 - self.win_height / 2)
+
+        self.geometry("{}x{}+{}+{}".format(self.win_width, self.win_height, self.x, self.y))
+
+
+        self.message = tk.Message(master_widget, text=message, width = self.win_width-30, font = MEDIUM_FONT)
+        self.message.grid(row=0, column=0, columnspan=3, sticky=(tk.N, tk.S, tk.E, tk.W),padx = 10, pady = (15,5))
+
+        self.ok_button = ttk.Button(master_widget, text="Ok", width=10, command=self.destroy)
+        self.ok_button.grid( row=1 ,column=1, sticky= tk.N, padx = 10, pady = (15,5))
+
 
 
 class StartPage(tk.Tk):
+    def escapeExit(self, event):
+        self.destroy()
+
     def __init__(self, *args, **kwargs):
         tk.Tk.__init__(self, *args, **kwargs)
         tk.Tk.iconbitmap(self)
         tk.Tk.wm_title(self,"EEG classification")
+
+        self.win_width = 950
+        self.win_height = 900
+        self.x = 100
+        self.y = 50
+        self.geometry("{}x{}+{}+{}".format(self.win_width, self.win_height, self.x, self.y))
+        self.bind('<Escape>', self.escapeExit)
 
         # master_widget - main widget where all others are located
         master_widget = tk.Frame(self)
@@ -47,7 +80,7 @@ class StartPage(tk.Tk):
         introduction_txt = "This script will build pie charts of stage distribution for each classification " \
                            "group in a given csv or xlsx file. You will be able to choose which states you need " \
                            "to analyze and generate logs of file used for in each interested stage."
-        introduction = tk.Message(master_widget, text=introduction_txt, font = LARGE_FONT, width=820)
+        introduction = tk.Message(master_widget, text=introduction_txt, font = LARGE_FONT, width=900)
         introduction.grid(column=0, row=0, columnspan=10, sticky=(tk.N, tk.S, tk.E, tk.W), pady = (15,5))
 
 
@@ -61,7 +94,7 @@ class StartPage(tk.Tk):
                            "ketamine, add (K) to the name of a report. Each line of report should look like: time | " \
                            "anastasia stage | comment (optional) .\n\nNote: Reading files can take some time."' \
                            ''\n\nExample:\n'
-        instructions = tk.Message(master_widget, text=instructions_txt, font = MEDIUM_FONT, width=820)
+        instructions = tk.Message(master_widget, text=instructions_txt, font = MEDIUM_FONT, width=900)
         instructions.grid(column=0, row=1, columnspan=10, sticky=(tk.N, tk.S, tk.E, tk.W), padx = 10)
 
 
@@ -73,9 +106,9 @@ class StartPage(tk.Tk):
         canvas_results.grid(column=0, row=2, columnspan=5, sticky=(tk.N,tk.W), padx = (10,0))
 
         # Example of report
-        second_example = tk.PhotoImage(file="e:\\Users\\sevamunger\\Desktop\\exampl.png")
-        canvas_reports = tk.Canvas(master_widget, width=350, height=142, borderwidth=4, relief="groove")
-        canvas_reports.create_image(5, 75, anchor=tk.W, image=second_example)
+        second_example = tk.PhotoImage(file="e:\\Users\\sevamunger\\Desktop\\report_examples.png")
+        canvas_reports = tk.Canvas(master_widget, width=403, height=396, borderwidth=4, relief="groove")
+        canvas_reports.create_image(5, 5, anchor=tk.NW,  image=second_example)
         canvas_reports.image = second_example
         canvas_reports.grid(column=5, row=2, columnspan=5, sticky=(tk.N,tk.W))
 
@@ -127,9 +160,8 @@ class StartPage(tk.Tk):
             res_txt.config(text = results_text)
             root.config(cursor="")
 
-        add_results_button =  ttk.Button(master_widget, text="Add", width=10, command=lambda: resultReader(self))
+        add_results_button =  ttk.Button(master_widget, text="Choose", width=10, command=lambda: resultReader(self))
         add_results_button.grid(column=9, row=3, sticky=(tk.W))
-
 
         # No / Ok img
         canvas_reports_state = tk.Canvas(master_widget, width=38, height=36)
@@ -166,27 +198,30 @@ class StartPage(tk.Tk):
             rep_txt.config(text = report_text)
             root.config(cursor="")
 
-        add_results_button =  ttk.Button(master_widget, text="Add", width=10, command=lambda: reportReader(self))
+        add_results_button =  ttk.Button(master_widget, text="Choose", width=10, command=lambda: reportReader(self))
         add_results_button.grid(column=9, row=4, sticky=(tk.W))
 
 
-        def makeEegFragments(root):
-            root.config(cursor="wait")
-            root.update()
+        def buildPlotsButton(root):
             global EEG_FRAGMENTS
             global EEG_STAT
 
+            if RESULTS==0 or REPORTS==0:
+                tk.messagebox.showwarning("Not enough files","You must choose a result file "
+                                                    "and report files to build plots")
+                return
+            root.config(cursor="wait")
+            root.update()
             EEG_FRAGMENTS = myPy.matfiles2eegFragments(RESULTS, REPORTS)
-
             EEG_STAT = myPy.eegStat(EEG_FRAGMENTS)
+            root.config(cursor="")
+            root.update()
             plots = PlotPage()
             plots.mainloop()
-            root.config(cursor="")
-
-
         # Go to plot window button
-        continue_button = ttk.Button(master_widget, text="Build plots", width=16, command=lambda: makeEegFragments(self))
-        continue_button.grid(column=2, row=5, sticky=(tk.W), pady = (20, 20), padx = 5)
+        build_plots_button = ttk.Button(master_widget, text="Build plots", width=16,
+                                     command=lambda: buildPlotsButton(self))
+        build_plots_button.grid(column=2, row=5, sticky=(tk.W), pady = (20, 20), padx = 5)
 
         # Exit app button
         exit_button = ttk.Button(master_widget, text="Exit", width=10, command=lambda: exit(0))
@@ -205,7 +240,7 @@ class PlotPage(tk.Tk):
         global LOG_DICT
         LOG_DICT = myPy.histPlotter(self.figure, EEG_STAT, STAGE_SHOW)
         canvas = FigureCanvasTkAgg(self.figure, master_widget)
-        canvas.get_tk_widget().grid(column=0, row=1, columnspan=3, sticky=(tk.N, tk.W))
+        canvas.get_tk_widget().grid(column=0, row=1, columnspan=4, sticky=(tk.N, tk.W))
         canvas.show()
 
 
@@ -214,24 +249,7 @@ class PlotPage(tk.Tk):
         stage_label.grid(column=0, row=2, sticky=(tk.N, tk.W), padx = 10)
 
 
-        class CheckBoxes(tk.Frame):
-            def __init__(self, parent, check_dict):
-                tk.Frame.__init__(self, parent )
-                self.boxes = {}
-                i=0
-                for box in check_dict:
-                    self.boxes[box] = ttk.Checkbutton(self, text=str(box))
-                    self.boxes[box].state(['!alternate'])
-                    self.boxes[box].grid(row = 0, column = i)
-                    if (check_dict[box] == True):
-                        self.boxes[box].state(['selected'])
-                    i+=1
-
-
-            def state(self):
-                return {box: self.boxes[box].instate(['selected']) for box in self.boxes}
-
-        stage_boxes = CheckBoxes(master_widget, STAGE_SHOW)
+        stage_boxes = myPy.CheckBoxes(master_widget, STAGE_SHOW)
         stage_boxes.grid(column=0, row=3, sticky=(tk.N, tk.W), padx = 10)
 
 
@@ -252,21 +270,86 @@ class PlotPage(tk.Tk):
         apply_button.grid(column=0, row=4, sticky=(tk.W), pady = (20, 20), padx = 5)
 
 
-        def logButton(root):
-            root.config(cursor="wait")
-            root.update()
-            myPy.writeLogs(LOG_DICT, EEG_FRAGMENTS, SAVE_PATH)
-            root.config(cursor="")
-
-
-        log_button = ttk.Button(master_widget, text="Files in groups", width=16, command=lambda: logButton(self))
+        def logButton():
+            logs = LogPage()
+            logs.mainloop()
+        # Log window button
+        log_button = ttk.Button(master_widget, text="Files in groups", width=16, command=lambda: logButton())
         log_button.grid(column=1, row=4, sticky=(tk.W), pady = (20, 20), padx = 5)
 
 
+        def saveImg(self):
+            if not os.path.exists(SAVE_PATH):
+                os.makedirs(SAVE_PATH)
+            self.figure.savefig(SAVE_PATH+"\\HIST.jpg", dpi=300)
 
-        exit_button = ttk.Button(master_widget, text="Exit", width=10, command=lambda: exit(0))
-        exit_button.grid(column=2, row=4,  sticky=(tk.W))
+            tk.messagebox.showinfo(parent = self, title = "Complete",
+                                   message = 'Figure have been successfully saved to:\n"{}"'.format(SAVE_PATH))
+        # Save img button
+        save_img_button = ttk.Button(master_widget, text="Save plot", width=16, command=lambda: saveImg(self))
+        save_img_button.grid(column=2, row=4,  sticky=(tk.W))
+
+        exit_button = ttk.Button(master_widget, text="Exit", width=10, command=self.destroy)
+        exit_button.grid(column=3, row=4,  sticky=(tk.W))
 
 
-app = StartPage()
-app.mainloop()
+class LogPage(tk.Tk):
+    def drawCheckButtons(self):
+        i = 0
+        for group in LOG_DICT:
+            group_name = ttk.Label(self.check_buttons_frame, text=group, font=LARGE_FONT)
+            group_name.grid(row=i, column=0, padx=10, pady=5)
+            self.check_buttons[group] = (myPy.CheckBoxes(self.check_buttons_frame, LOG_DICT[group]))
+            self.check_buttons[group].grid(row=i + 1, column=0, padx=5, pady=5)
+            i += 2
+
+    def __init__(self, *args, **kwargs):
+        tk.Tk.__init__(self, *args, **kwargs)
+        tk.Tk.iconbitmap(self)
+        tk.Tk.wm_title(self,"Log files")
+        master_widget = tk.Frame(self)
+        master_widget.grid(row=0, column=0, sticky=(tk.N, tk.S, tk.E, tk.W))
+
+        self.instruction_text = "The script can generate logs, which will show which fragments are included to a " \
+                                "stage of interest to you in different groups. By default, all stages are selected in "\
+                                "groups except one with the biggest percentage in a group. All logs will be saved to: "\
+                                "{}".format(SAVE_PATH)
+        self.instruction = tk.Message(master_widget, text=self.instruction_text, font = MEDIUM_FONT, width=500)
+        self.instruction.grid( row=0, column=0, columnspan=2, sticky=(tk.N, tk.S, tk.E, tk.W), padx = 10)
+
+        self.check_buttons_frame = tk.Frame(master_widget)
+        self.check_buttons_frame.grid(row=1, column=0, columnspan=2, sticky=(tk.N, tk.S, tk.E, tk.W))
+
+        self.check_buttons = {}
+        self.drawCheckButtons()
+
+
+        def writeLogsButton(self):
+            log_dict = {}
+            for group in self.check_buttons:
+                log_dict[group] = self.check_buttons[group].state()
+            myPy.writeLogs(log_dict, EEG_FRAGMENTS, SAVE_PATH)
+
+            tk.messagebox.showinfo(parent = self, title = "Complete",
+                                   message = 'Logs have been successfully saved to:\n"{}"'.format(SAVE_PATH))
+        # Save logs to SAVE PATH
+        log_button = ttk.Button(master_widget, text="Write logs", width=10,
+                                   command=lambda: writeLogsButton(self))
+        log_button.grid(row=2, column=0, sticky=(tk.W))
+
+
+        cancel_button = ttk.Button(master_widget, text="Cancel", width=10,
+                                   command=self.destroy)
+        cancel_button.grid(row=2, column=1, sticky=(tk.E))
+
+        self.group_list = []
+
+
+if __name__ == "__main__":
+    app = StartPage()
+
+    # get screen width and height
+    SCREEN_WIDTH = app.winfo_screenwidth()
+    SCREEN_HEIGHT = app.winfo_screenheight()
+
+    app.mainloop()

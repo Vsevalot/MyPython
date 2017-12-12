@@ -2,8 +2,8 @@ import os
 import datetime
 import matplotlib
 import matplotlib.pyplot as plt
-import matplotlib.widgets
-from matplotlib.figure import Figure
+import tkinter as tk
+from tkinter import ttk
 from tkinter import Tk, Frame, LEFT, RIGHT, W, Checkbutton, Message, Button, BooleanVar, Canvas, PhotoImage, E
 from tkinter.filedialog import askopenfilename
 from tkinter.filedialog import askdirectory
@@ -22,8 +22,6 @@ def pathFromName(path:str):
     if '/' in path:
         delimiter='/'
     return '/'.join(path.split(delimiter)[:-1])
-
-
 
 
 def errMsg(message: str, code: int = 1):
@@ -329,21 +327,21 @@ class Report(object):  # a list of records, with name, date and ketamine drugs
             self.chronoChecker()
 
 
-class Checkbar(Frame):
-    def __init__(self, parent, check_buttons, side=LEFT, anchor=W):
-        Frame.__init__(self, parent)
-        self.vars = []
-        for button in check_buttons:
-            chk = Checkbutton(self, text=str(button), variable=check_buttons[button])
-            chk.pack(side=side, anchor=anchor)
-            if (check_buttons[button].get()==True):
-                chk.select()
-            self.vars.append(check_buttons[button])
+class CheckBoxes(tk.Frame):
+    def __init__(self, parent, check_dict):
+        tk.Frame.__init__(self, parent)
+        self.boxes = {}
+        i = 0
+        for box in check_dict:
+            self.boxes[box] = ttk.Checkbutton(self, text=str(box))
+            self.boxes[box].state(['!alternate'])
+            self.boxes[box].grid(row=0, column=i)
+            if (check_dict[box] == True):
+                self.boxes[box].state(['selected'])
+            i += 1
 
     def state(self):
-        return list(map(lambda var: var.get(), self.vars))
-
-
+        return {box: self.boxes[box].instate(['selected']) for box in self.boxes}
 
 '''
 Finds stage for the matfile in the reports. If not found returns EEG_Fragment with None stage
@@ -381,20 +379,21 @@ def getStage(matfile: str, reports: list):
 Takes a dictionary of matfiles lists and returns dictionary of EEG_Fragments
 '''
 def matfiles2eegFragments(results: dict, reports_list: list):
+    eeg_fragments = copy.deepcopy(results)
     correct_reports = [r for r in reports_list  if r.correct_report == True]
     incorrect_reports = [r for r in reports_list if r.correct_report == False]
     group_names = list(results.keys())
     for group in group_names:
         for matfile in range(len(results[group])):
-            if results[group][matfile][:3]!="rec":
-                results[group][matfile] = getStage("folder_" + results[group][matfile], correct_reports)
+            if eeg_fragments[group][matfile][:3]!="rec":
+                eeg_fragments[group][matfile] = getStage("folder_" + results[group][matfile], correct_reports)
             else:
-                results[group][matfile] = getStage(results[group][matfile], correct_reports)
+                eeg_fragments[group][matfile] = getStage(results[group][matfile], correct_reports)
 
     if incorrect_reports!=[]:
         err_msgs=["File: " + report.name + ", reason: " + report.reason for report in incorrect_reports ]
         warningMsg(err_msgs)
-    return results
+    return eeg_fragments
 
 
 '''
@@ -431,19 +430,20 @@ def writeLogs(log_dict: dict, eeg: dict, save_path: str):
 
     for group in log_dict:
         for stage in log_dict[group]:
-            csv = [eeg_fragment for eeg_fragment in eeg[group] if eeg_fragment.stage == stage]
-            if csv == []:
-                continue
+            if log_dict[group][stage]:
+                csv = [eeg_fragment for eeg_fragment in eeg[group] if eeg_fragment.stage == stage]
+                if csv == []:
+                    continue
 
-            reports = []  # names of all reports used for the fragments in the csv
-            for fragments in csv:
-                if fragments.report_name not in reports:
-                    reports.append(fragments.report_name)
+                reports = []  # names of all reports used for the fragments in the csv
+                for fragments in csv:
+                    if fragments.report_name not in reports:
+                        reports.append(fragments.report_name)
 
-            csv = [ ["Report : " + report_name] + [eeg_fragment.name for eeg_fragment in csv
-                   if eeg_fragment.report_name == report_name] for report_name in reports]
+                csv = [ ["Report : " + report_name] + [eeg_fragment.name for eeg_fragment in csv
+                       if eeg_fragment.report_name == report_name] for report_name in reports]
 
-            write2csv(csv, group + ' stage ' + str(stage), save_path)
+                write2csv(csv, group + ' stage ' + str(stage), save_path)
 
 
 
@@ -520,7 +520,7 @@ def eerCounter(stages_stat_, log_dict):
             stage_value = stages_stat[group][stage]
             group_errs[group] += multiplier*stage_value/stage_sum
         group_errs[group]=round(group_errs[group],4)
-        log_dict[group] = [stage for stage in stages_stat[group] if stage!=max_stage]
+        log_dict[group] = {stage:True if stage!=max_stage else False for stage in stages_stat[group]}
 
     return group_errs
 
@@ -571,8 +571,12 @@ def histPlotter(fig, stages_stat_, stage_show_):
         stage_perc = [stages_perc[group][stage] for stage in stage_positions]
         plot = fig.add_subplot(high, width, i)
         plot.bar(stage_positions, stage_perc, color = "#608edb")
+        if group==worst_group:
+            title_color='r'
+        else:
+            title_color='k'
         title = "{} ; error = {}".format(group, errors[group])
-        plot.set_title(title, fontsize=10)
+        plot.set_title(title, fontsize=10, color = title_color)
         plot.set_ylabel("Percentage")
         plot.axis([stage_positions[0] - 0.5, stage_positions[-1] + 0.5, 0, 100])
         for k in range(len(stage_positions)):
