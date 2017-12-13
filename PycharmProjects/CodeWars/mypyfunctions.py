@@ -343,6 +343,27 @@ class CheckBoxes(tk.Frame):
     def state(self):
         return {box: self.boxes[box].instate(['selected']) for box in self.boxes}
 
+    def reset(self):
+        for box in self.boxes:
+            self.boxes[box].state(["!selected"])
+
+
+class PlotCheckBoxes(tk.Frame):
+    def __init__(self, plot_page, check_dict):
+        tk.Frame.__init__(self, plot_page)
+        self.boxes = {}
+        i = 0
+        for box in check_dict:
+            self.boxes[box] = ttk.Checkbutton(self, text=str(box), command=lambda: plot_page.applyStages(plot_page))
+            self.boxes[box].state(['!alternate'])
+            self.boxes[box].grid(row=0, column=i)
+            if (check_dict[box] == True):
+                self.boxes[box].state(['selected'])
+            i += 1
+
+    def state(self):
+        return {box: self.boxes[box].instate(['selected']) for box in self.boxes}
+
 '''
 Finds stage for the matfile in the reports. If not found returns EEG_Fragment with None stage
 '''

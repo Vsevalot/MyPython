@@ -29,8 +29,6 @@ STAGE_SHOW[3] = True
 LOG_DICT = {}
 
 
-
-
 class WindowMsg(tk.Tk):
     def __init__(self, label, message, *args, **kwargs,):
         tk.Tk.__init__(self, *args, **kwargs)
@@ -55,10 +53,83 @@ class WindowMsg(tk.Tk):
         self.ok_button.grid( row=1 ,column=1, sticky= tk.N, padx = 10, pady = (15,5))
 
 
-
 class StartPage(tk.Tk):
+
     def escapeExit(self, event):
         self.destroy()
+
+    def resultButton(self, root):
+        global RESULTS
+        global RESULTS_PATH
+        global SAVE_PATH
+        path = tk.filedialog.askopenfilename(filetype=(("CSV File", "*.csv"), ("XLSX File", "*.xlsx")),
+                                             title="Choose a file with results of classification",
+                                             initialdir="Z:\\Tetervak")
+        if (path == ''):
+            return
+
+        RESULTS_PATH = myPy.pathFromName(path)
+
+        root.config(cursor="wait")
+        root.update()
+
+        if  path[-4:] == "xlsx":
+            RESULTS = myPy.results2Dict(myPy.readXLSX(path))
+            SAVE_PATH = path[:-5]
+        elif path[-3:] == "csv":
+            RESULTS = myPy.results2Dict(myPy.readCSV(path))
+            SAVE_PATH = path[:-4]
+        else:
+            print("How did you get here?")
+            root.config(cursor="")
+            exit(0)
+
+        check_img = tk.PhotoImage(file="e:\\Users\\sevamunger\\Desktop\\ok.png")
+        results_text = "Results file selected"
+        self.canvas_results_state.create_image(0, 18, anchor=tk.W, image=check_img)
+        self.canvas_results_state.image = check_img
+        self.result_state_msg.config(text = results_text)
+        root.config(cursor="")
+
+    def reportButton(self, root):
+        global REPORTS
+
+        path = tk.filedialog.askdirectory(title="Choose a folder which contain reports",
+                                          initialdir = "Z:\\Tetervak\\Reports\\complete")
+        if (path == ''):
+            return
+        root.config(cursor="wait")
+        root.update()
+        REPORTS = [os.path.join(path, f) for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))]
+        REPORTS = [myPy.Report(report, myPy.readCSV(report)) for report in REPORTS]
+
+        if REPORTS == []:
+            self.report_state_msg.config(text="An empty folder chosen")
+            return
+
+        check_img = tk.PhotoImage(file="e:\\Users\\sevamunger\\Desktop\\ok.png")
+        report_text = "Report folder selected"
+        self.canvas_reports_state.create_image(0, 18, anchor=tk.W, image=check_img)
+        self.canvas_reports_state.image = check_img
+        self.report_state_msg.config(text = report_text)
+        root.config(cursor="")
+
+    def buildPlotsButton(self, root):
+        global EEG_FRAGMENTS
+        global EEG_STAT
+
+        if RESULTS==0 or REPORTS==0:
+            tk.messagebox.showwarning("Not enough files","You must choose a result file "
+                                                "and report files to build plots")
+            return
+        root.config(cursor="wait")
+        root.update()
+        EEG_FRAGMENTS = myPy.matfiles2eegFragments(RESULTS, REPORTS)
+        EEG_STAT = myPy.eegStat(EEG_FRAGMENTS)
+        root.config(cursor="")
+        root.update()
+        plots = PlotPage()
+        plots.mainloop()
 
     def __init__(self, *args, **kwargs):
         tk.Tk.__init__(self, *args, **kwargs)
@@ -73,16 +144,15 @@ class StartPage(tk.Tk):
         self.bind('<Escape>', self.escapeExit)
 
         # master_widget - main widget where all others are located
-        master_widget = tk.Frame(self)
-        master_widget.grid(row=0, column=0, sticky=(tk.N, tk.S, tk.E, tk.W))
+        self.master_widget = tk.Frame(self)
+        self.master_widget.grid(row=0, column=0, sticky=(tk.N, tk.S, tk.E, tk.W))
 
         # Introduction
         introduction_txt = "This script will build pie charts of stage distribution for each classification " \
                            "group in a given csv or xlsx file. You will be able to choose which states you need " \
                            "to analyze and generate logs of file used for in each interested stage."
-        introduction = tk.Message(master_widget, text=introduction_txt, font = LARGE_FONT, width=900)
-        introduction.grid(column=0, row=0, columnspan=10, sticky=(tk.N, tk.S, tk.E, tk.W), pady = (15,5))
-
+        self.introduction = tk.Message(self.master_widget, text=introduction_txt, font = LARGE_FONT, width=900)
+        self.introduction.grid(column=0, row=0, columnspan=10, sticky=(tk.N, tk.S, tk.E, tk.W), pady = (15,5))
 
         # Instructions
         instructions_txt = "Script takes a file of results of classification where each group contain a column of " \
@@ -94,255 +164,193 @@ class StartPage(tk.Tk):
                            "ketamine, add (K) to the name of a report. Each line of report should look like: time | " \
                            "anastasia stage | comment (optional) .\n\nNote: Reading files can take some time."' \
                            ''\n\nExample:\n'
-        instructions = tk.Message(master_widget, text=instructions_txt, font = MEDIUM_FONT, width=900)
-        instructions.grid(column=0, row=1, columnspan=10, sticky=(tk.N, tk.S, tk.E, tk.W), padx = 10)
-
+        self.instructions = tk.Message(self.master_widget, text=instructions_txt, font = MEDIUM_FONT, width=900)
+        self.instructions.grid(column=0, row=1, columnspan=10, sticky=(tk.N, tk.S, tk.E, tk.W), padx = 10)
 
         # Example of results
-        first_example = tk.PhotoImage(file="e:\\Users\\sevamunger\\Desktop\\exampl.png")
-        canvas_results = tk.Canvas(master_widget, width=350, height=142, borderwidth=4, relief="groove")
-        canvas_results.create_image(0, 75, anchor=tk.W, image=first_example)
-        canvas_results.image = first_example
-        canvas_results.grid(column=0, row=2, columnspan=5, sticky=(tk.N,tk.W), padx = (10,0))
+        self.result_example_img = tk.PhotoImage(file="e:\\Users\\sevamunger\\Desktop\\exampl.png")
+        self.canvas_results = tk.Canvas(self.master_widget, width=350, height=142, borderwidth=4, relief="groove")
+        self.canvas_results.create_image(0, 75, anchor=tk.W, image=self.result_example_img)
+        self.canvas_results.image = self.result_example_img
+        self.canvas_results.grid(column=0, row=2, columnspan=5, sticky=(tk.N,tk.W), padx = (10,0))
 
         # Example of report
-        second_example = tk.PhotoImage(file="e:\\Users\\sevamunger\\Desktop\\report_examples.png")
-        canvas_reports = tk.Canvas(master_widget, width=403, height=396, borderwidth=4, relief="groove")
-        canvas_reports.create_image(5, 5, anchor=tk.NW,  image=second_example)
-        canvas_reports.image = second_example
-        canvas_reports.grid(column=5, row=2, columnspan=5, sticky=(tk.N,tk.W))
-
+        self.report_example_img = tk.PhotoImage(file="e:\\Users\\sevamunger\\Desktop\\report_examples.png")
+        self.canvas_reports = tk.Canvas(self.master_widget, width=403, height=396, borderwidth=4, relief="groove")
+        self.canvas_reports.create_image(5, 5, anchor=tk.NW,  image=self.report_example_img)
+        self.canvas_reports.image = self.report_example_img
+        self.canvas_reports.grid(column=5, row=2, columnspan=5, sticky=(tk.N,tk.W))
 
         # No / Ok img
         no_img = tk.PhotoImage(file="e:\\Users\\sevamunger\\Desktop\\no.png")
-        canvas_results_state = tk.Canvas(master_widget, width=38, height=36)
-        canvas_results_state.create_image(0, 18, anchor=tk.W, image=no_img)
-        canvas_results_state.image = no_img
-        canvas_results_state.grid(column=0, row=3, sticky=(tk.E), pady = 10)
+        self.canvas_results_state = tk.Canvas(self.master_widget, width=38, height=36)
+        self.canvas_results_state.create_image(0, 18, anchor=tk.W, image=no_img)
+        self.canvas_results_state.image = no_img
+        self.canvas_results_state.grid(column=0, row=3, sticky=(tk.E), pady = 10)
 
         # Result state
-        results_text = "No file found, chose a way to the analysis file"
-        res_txt = tk.Label(master_widget, text=results_text, font = MEDIUM_FONT)
-        res_txt.grid(column=2, row=3, columnspan=7, sticky=(tk.W))
-
+        no_results_text = "No file found, chose a way to the analysis file"
+        self.result_state_msg = tk.Label(self.master_widget, text=no_results_text, font = MEDIUM_FONT)
+        self.result_state_msg.grid(column=2, row=3, columnspan=7, sticky=(tk.W))
 
         # Add results button
-        def resultReader(root):
-            global RESULTS
-            global RESULTS_PATH
-            global SAVE_PATH
-            path = tk.filedialog.askopenfilename(filetype=(("CSV File", "*.csv"), ("XLSX File", "*.xlsx")),
-                                                 title="Choose a file with results of classification",
-                                                 initialdir="Z:\\Tetervak")
-            if (path == ''):
-                return
-
-            RESULTS_PATH = myPy.pathFromName(path)
-
-            root.config(cursor="wait")
-            root.update()
-
-            if  path[-4:] == "xlsx":
-                RESULTS = myPy.results2Dict(myPy.readXLSX(path))
-                SAVE_PATH = path[:-5]
-            elif path[-3:] == "csv":
-                RESULTS = myPy.results2Dict(myPy.readCSV(path))
-                SAVE_PATH = path[:-4]
-            else:
-                print("How did you get here?")
-                root.config(cursor="")
-                exit(0)
-
-            check_img = tk.PhotoImage(file="e:\\Users\\sevamunger\\Desktop\\ok.png")
-            results_text = "Results file selected"
-            canvas_results_state.create_image(0, 18, anchor=tk.W, image=check_img)
-            canvas_results_state.image = check_img
-            res_txt.config(text = results_text)
-            root.config(cursor="")
-
-        add_results_button =  ttk.Button(master_widget, text="Choose", width=10, command=lambda: resultReader(self))
-        add_results_button.grid(column=9, row=3, sticky=(tk.W))
+        self.choose_results_button =  ttk.Button(self.master_widget, text="Choose", width=10,
+                                                 command=lambda: self.resultButton(self))
+        self.choose_results_button.grid(column=9, row=3, sticky=(tk.W))
 
         # No / Ok img
-        canvas_reports_state = tk.Canvas(master_widget, width=38, height=36)
-        canvas_reports_state.create_image(0, 18, anchor=tk.W, image=no_img)
-        canvas_reports_state.image = no_img
-        canvas_reports_state.grid(column=0, row=4, sticky=(tk.E))
+        self.canvas_reports_state = tk.Canvas(self.master_widget, width=38, height=36)
+        self.canvas_reports_state.create_image(0, 18, anchor=tk.W, image=no_img)
+        self.canvas_reports_state.image = no_img
+        self.canvas_reports_state.grid(column=0, row=4, sticky=(tk.E))
 
         # Report state
-        reports_text = "No report folder detected found, give a way to the reports location"
-        rep_txt = tk.Label(master_widget, text=reports_text, font = MEDIUM_FONT)
-        rep_txt.grid(column=2, row=4, columnspan=7, sticky=(tk.W))
+        no_reports_text = "No report folder detected found, give a way to the reports location"
+        self.report_state_msg = tk.Label(self.master_widget, text=no_reports_text, font = MEDIUM_FONT)
+        self.report_state_msg.grid(column=2, row=4, columnspan=7, sticky=(tk.W))
 
         # Add results button
-        def reportReader(root):
-            global REPORTS
+        self.add_results_button =  ttk.Button(self.master_widget, text="Choose", width=10,
+                                              command=lambda: self.reportButton(self))
+        self.add_results_button.grid(column=9, row=4, sticky=(tk.W))
 
-            path = tk.filedialog.askdirectory(title="Choose a folder which contain reports",
-                                              initialdir = "Z:\\Tetervak\\Reports\\complete")
-            if (path == ''):
-                return
-            root.config(cursor="wait")
-            root.update()
-            REPORTS = [os.path.join(path, f) for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))]
-            REPORTS = [myPy.Report(report, myPy.readCSV(report)) for report in REPORTS]
-
-            if REPORTS == []:
-                rep_txt.config(text="An empty folder chosen")
-                return
-
-            check_img = tk.PhotoImage(file="e:\\Users\\sevamunger\\Desktop\\ok.png")
-            report_text = "Report folder selected"
-            canvas_reports_state.create_image(0, 18, anchor=tk.W, image=check_img)
-            canvas_reports_state.image = check_img
-            rep_txt.config(text = report_text)
-            root.config(cursor="")
-
-        add_results_button =  ttk.Button(master_widget, text="Choose", width=10, command=lambda: reportReader(self))
-        add_results_button.grid(column=9, row=4, sticky=(tk.W))
-
-
-        def buildPlotsButton(root):
-            global EEG_FRAGMENTS
-            global EEG_STAT
-
-            if RESULTS==0 or REPORTS==0:
-                tk.messagebox.showwarning("Not enough files","You must choose a result file "
-                                                    "and report files to build plots")
-                return
-            root.config(cursor="wait")
-            root.update()
-            EEG_FRAGMENTS = myPy.matfiles2eegFragments(RESULTS, REPORTS)
-            EEG_STAT = myPy.eegStat(EEG_FRAGMENTS)
-            root.config(cursor="")
-            root.update()
-            plots = PlotPage()
-            plots.mainloop()
         # Go to plot window button
-        build_plots_button = ttk.Button(master_widget, text="Build plots", width=16,
-                                     command=lambda: buildPlotsButton(self))
-        build_plots_button.grid(column=2, row=5, sticky=(tk.W), pady = (20, 20), padx = 5)
+        self.build_plots_button = ttk.Button(self.master_widget, text="Build plots", width=16,
+                                     command=lambda: self.buildPlotsButton(self))
+        self.build_plots_button.grid(column=2, row=5, sticky=(tk.W), pady = (20, 20), padx = 5)
 
         # Exit app button
-        exit_button = ttk.Button(master_widget, text="Exit", width=10, command=lambda: exit(0))
-        exit_button.grid(column=7, row=5,  sticky=(tk.W))
+        self.exit_button = ttk.Button(self.master_widget, text="Exit", width=10, command=lambda: exit(0))
+        self.exit_button.grid(column=7, row=5,  sticky=(tk.W))
 
 
 class PlotPage(tk.Tk):
+
+    def applyStages(self, root):
+        root.config(cursor="wait")
+        root.update()
+        global STAGE_SHOW
+        current_state = self.stage_boxes.state()
+        for stage in STAGE_SHOW:
+            STAGE_SHOW[stage] = current_state[stage]
+
+        global LOG_DICT
+        LOG_DICT = myPy.histPlotter(self.figure, EEG_STAT, STAGE_SHOW)
+        self.figure_canvas.show()
+        root.config(cursor="")
+
+    def saveImg(self):
+        if not os.path.exists(SAVE_PATH):
+            os.makedirs(SAVE_PATH)
+        self.figure.savefig(SAVE_PATH + "\\HIST.jpg", dpi=300)
+
+        tk.messagebox.showinfo(parent=self, title="Complete",
+                               message='Figure have been successfully saved to:\n"{}"'.format(SAVE_PATH))
+
+    def logButton(self):
+        logs = LogPage()
+        logs.mainloop()
+
     def __init__(self, *args, **kwargs):
         tk.Tk.__init__(self, *args, **kwargs)
         tk.Tk.iconbitmap(self)
         tk.Tk.wm_title(self,"Hist plots")
-        master_widget = tk.Frame(self)
-        master_widget.grid(row=0, column=0, sticky=(tk.N, tk.S, tk.E, tk.W))
+        self.master_widget = tk.Frame(self)
+        self.master_widget.grid(row=0, column=0, sticky=(tk.N, tk.S, tk.E, tk.W))
 
+        # Draw bar subplots
         self.figure = Figure(figsize=(14.76, 6.6), dpi=100)
         global LOG_DICT
-        LOG_DICT = myPy.histPlotter(self.figure, EEG_STAT, STAGE_SHOW)
-        canvas = FigureCanvasTkAgg(self.figure, master_widget)
-        canvas.get_tk_widget().grid(column=0, row=1, columnspan=4, sticky=(tk.N, tk.W))
-        canvas.show()
+        LOG_DICT = myPy.histPlotter(self.figure, EEG_STAT, STAGE_SHOW) # Which files should be logged
+        self.figure_canvas = FigureCanvasTkAgg(self.figure, self.master_widget)
+        self.figure_canvas.get_tk_widget().grid(column=0, row=1, columnspan=4, sticky=(tk.N, tk.W))
+        self.figure_canvas.show()
 
+        # Label for stages checkboxes
+        stage_text = "Stages:"
+        self.stage_label = tk.Label(self.master_widget, text=stage_text, font = MEDIUM_FONT)
+        self.stage_label.grid(column=0, row=2, sticky=(tk.N, tk.W), padx = 10)
 
-        stage_txt = "Stages:"
-        stage_label = tk.Label(master_widget, text=stage_txt, font = MEDIUM_FONT)
-        stage_label.grid(column=0, row=2, sticky=(tk.N, tk.W), padx = 10)
+        # Stages chekboxes
+        self.stage_boxes = myPy.PlotCheckBoxes(self, STAGE_SHOW)
+        self.stage_boxes.grid(column=0, row=3, sticky=(tk.N, tk.W), padx = 10)
 
-
-        stage_boxes = myPy.CheckBoxes(master_widget, STAGE_SHOW)
-        stage_boxes.grid(column=0, row=3, sticky=(tk.N, tk.W), padx = 10)
-
-
-        def applyButton(root):
-            root.config(cursor="wait")
-            root.update()
-            global STAGE_SHOW
-            current_state = stage_boxes.state()
-            for stage in STAGE_SHOW:
-                STAGE_SHOW[stage] = current_state[stage]
-
-            global LOG_DICT
-            LOG_DICT = myPy.histPlotter(self.figure, EEG_STAT, STAGE_SHOW)
-            canvas.show()
-            root.config(cursor="")
-        # Apply new stages
-        apply_button = ttk.Button(master_widget, text="Apply stages", width=22, command=lambda: applyButton(self))
-        apply_button.grid(column=0, row=4, sticky=(tk.W), pady = (20, 20), padx = 5)
-
-
-        def logButton():
-            logs = LogPage()
-            logs.mainloop()
         # Log window button
-        log_button = ttk.Button(master_widget, text="Files in groups", width=16, command=lambda: logButton())
-        log_button.grid(column=1, row=4, sticky=(tk.W), pady = (20, 20), padx = 5)
+        self.log_button = ttk.Button(self.master_widget, text="Files in groups", width=16,
+                                     command=self.logButton)
+        self.log_button.grid(column=0, row=4, sticky=(tk.W), pady = (20, 20), padx = 5)
 
-
-        def saveImg(self):
-            if not os.path.exists(SAVE_PATH):
-                os.makedirs(SAVE_PATH)
-            self.figure.savefig(SAVE_PATH+"\\HIST.jpg", dpi=300)
-
-            tk.messagebox.showinfo(parent = self, title = "Complete",
-                                   message = 'Figure have been successfully saved to:\n"{}"'.format(SAVE_PATH))
         # Save img button
-        save_img_button = ttk.Button(master_widget, text="Save plot", width=16, command=lambda: saveImg(self))
-        save_img_button.grid(column=2, row=4,  sticky=(tk.W))
+        self.save_img_button = ttk.Button(self.master_widget, text="Save plot", width=16,
+                                          command=self.saveImg)
+        self.save_img_button.grid(column=1, row=4, sticky=(tk.W), pady = (20, 20), padx = 5)
 
-        exit_button = ttk.Button(master_widget, text="Exit", width=10, command=self.destroy)
-        exit_button.grid(column=3, row=4,  sticky=(tk.W))
+        # Close button
+        self.close_button = ttk.Button(self.master_widget, text="Close", width=10, command=self.destroy)
+        self.close_button.grid(column=2, row=4,  sticky=(tk.W))
 
 
 class LogPage(tk.Tk):
+
     def drawCheckButtons(self):
         i = 0
         for group in LOG_DICT:
-            group_name = ttk.Label(self.check_buttons_frame, text=group, font=LARGE_FONT)
-            group_name.grid(row=i, column=0, padx=10, pady=5)
+            self.group_name = ttk.Label(self.check_buttons_frame, text=group, font=LARGE_FONT)
+            self.group_name.grid(row=i, column=0, padx=10, pady=5)
             self.check_buttons[group] = (myPy.CheckBoxes(self.check_buttons_frame, LOG_DICT[group]))
             self.check_buttons[group].grid(row=i + 1, column=0, padx=5, pady=5)
             i += 2
+
+    def writeLogsButton(self):
+        log_dict = {}
+        for group in self.check_buttons:
+            log_dict[group] = self.check_buttons[group].state()
+        myPy.writeLogs(log_dict, EEG_FRAGMENTS, SAVE_PATH)
+
+        tk.messagebox.showinfo(parent=self, title="Complete",
+                               message='Logs have been successfully saved to:\n"{}"'.format(SAVE_PATH))
+
+    def resetButton(self):
+        for group in self.check_buttons:
+            self.check_buttons[group].reset()
 
     def __init__(self, *args, **kwargs):
         tk.Tk.__init__(self, *args, **kwargs)
         tk.Tk.iconbitmap(self)
         tk.Tk.wm_title(self,"Log files")
-        master_widget = tk.Frame(self)
-        master_widget.grid(row=0, column=0, sticky=(tk.N, tk.S, tk.E, tk.W))
+        self.master_widget = tk.Frame(self)
+        self.master_widget.grid(row=0, column=0, sticky=(tk.N, tk.S, tk.E, tk.W))
 
-        self.instruction_text = "The script can generate logs, which will show which fragments are included to a " \
+        # Instructions
+        instruction_text = "The script can generate logs, which will show which fragments are included to a " \
                                 "stage of interest to you in different groups. By default, all stages are selected in "\
                                 "groups except one with the biggest percentage in a group. All logs will be saved to: "\
                                 "{}".format(SAVE_PATH)
-        self.instruction = tk.Message(master_widget, text=self.instruction_text, font = MEDIUM_FONT, width=500)
-        self.instruction.grid( row=0, column=0, columnspan=2, sticky=(tk.N, tk.S, tk.E, tk.W), padx = 10)
+        self.instruction = tk.Message(self.master_widget, text=instruction_text, font = MEDIUM_FONT, width=500)
+        self.instruction.grid( row=0, column=0, columnspan=3, sticky=(tk.N, tk.S, tk.E, tk.W), padx = 10)
 
-        self.check_buttons_frame = tk.Frame(master_widget)
-        self.check_buttons_frame.grid(row=1, column=0, columnspan=2, sticky=(tk.N, tk.S, tk.E, tk.W))
+        # Frame for all check buttons
+        self.check_buttons_frame = tk.Frame(self.master_widget)
+        self.check_buttons_frame.grid(row=1, column=0, columnspan=3, sticky=(tk.N, tk.S, tk.E, tk.W))
 
+        # Draw check buttons
         self.check_buttons = {}
         self.drawCheckButtons()
 
-
-        def writeLogsButton(self):
-            log_dict = {}
-            for group in self.check_buttons:
-                log_dict[group] = self.check_buttons[group].state()
-            myPy.writeLogs(log_dict, EEG_FRAGMENTS, SAVE_PATH)
-
-            tk.messagebox.showinfo(parent = self, title = "Complete",
-                                   message = 'Logs have been successfully saved to:\n"{}"'.format(SAVE_PATH))
         # Save logs to SAVE PATH
-        log_button = ttk.Button(master_widget, text="Write logs", width=10,
-                                   command=lambda: writeLogsButton(self))
-        log_button.grid(row=2, column=0, sticky=(tk.W))
+        self.log_button = ttk.Button(self.master_widget, text="Write logs", width=10,
+                               command=self.writeLogsButton)
+        self.log_button.grid(row=2, column=0, sticky=(tk.W))
 
+        # Reset check boxes
+        self.reset_button = ttk.Button(self.master_widget, text="Reset", width=10,
+                                   command=self.resetButton)
+        self.reset_button.grid(row=2, column=1, sticky=(tk.E))
 
-        cancel_button = ttk.Button(master_widget, text="Cancel", width=10,
+        # Cancel log window
+        self.cancel_button = ttk.Button(self.master_widget, text="Cancel", width=10,
                                    command=self.destroy)
-        cancel_button.grid(row=2, column=1, sticky=(tk.E))
-
-        self.group_list = []
+        self.cancel_button.grid(row=2, column=2, sticky=(tk.E))
 
 
 if __name__ == "__main__":
