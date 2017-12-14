@@ -41,6 +41,22 @@ def warningMsg(warnings_list: list):
     showwarning("Warning", msg)
     root.destroy()
 
+'''
+Gets a name of a file from the file_path
+'''
+def fileFromPath(file_path: str) -> str:
+    if '\\' in file_path:
+        file_name = ''.join(file_path.split('\\')[-1])
+    elif '/' in file_path:
+        file_name = ''.join(file_path.split('/')[-1])
+    else:
+        errMsg(file_path)
+        exit(1)
+    for i in range(len(file_name) - 1, -1, -1):  # remove expansion from file name
+        if file_name[i] == '.':
+            return file_name[:i]
+    return file_name
+
 
 '''
 Determines path where to save all files
@@ -139,22 +155,6 @@ def reportTime(string_time: str, report_path: str):  # convert string to time in
         return ' '.join(["Wrong time format", ''.join(t)])
     return ' '.join(["Wrong time format", ''.join(t)])
 
-
-'''
-Gets a name of a file from the file_path
-'''
-def fileFromPath(file_path: str) -> str:
-    if '\\' in file_path:
-        file_name = ''.join(file_path.split('\\')[-1])
-    elif '/' in file_path:
-        file_name = ''.join(file_path.split('/')[-1])
-    else:
-        errMsg(file_path)
-        exit(1)
-    for i in range(len(file_name) - 1, -1, -1):  # remove expansion from file name
-        if file_name[i] == '.':
-            return file_name[:i]
-    return file_name
 
 
 '''
@@ -350,11 +350,30 @@ class CheckBoxes(tk.Frame):
 
 class PlotCheckBoxes(tk.Frame):
     def __init__(self, plot_page, check_dict):
-        tk.Frame.__init__(self, plot_page)
+        tk.Frame.__init__(self, plot_page.stage_show_frame)
+        self.boxes = {}
+        row = 0
+        column = 0
+
+        for box in check_dict:
+            self.boxes[box] = ttk.Checkbutton(self, text=STAGE_NAMES[box], command=lambda: plot_page.applyStages(plot_page))
+            self.boxes[box].state(['!alternate'])
+            self.boxes[box].grid(row=row, column=column)
+            if (check_dict[box] == True):
+                self.boxes[box].state(['selected'])
+            row += 1
+
+    def state(self):
+        return {box: self.boxes[box].instate(['selected']) for box in self.boxes}
+
+
+class LogsCheckBoxes(tk.Frame):
+    def __init__(self, parent, check_dict):
+        tk.Frame.__init__(self, parent)
         self.boxes = {}
         i = 0
         for box in check_dict:
-            self.boxes[box] = ttk.Checkbutton(self, text=str(box), command=lambda: plot_page.applyStages(plot_page))
+            self.boxes[box] = ttk.Checkbutton(self, text=str(box))
             self.boxes[box].state(['!alternate'])
             self.boxes[box].grid(row=0, column=i)
             if (check_dict[box] == True):
@@ -363,6 +382,11 @@ class PlotCheckBoxes(tk.Frame):
 
     def state(self):
         return {box: self.boxes[box].instate(['selected']) for box in self.boxes}
+
+    def reset(self):
+        for box in self.boxes:
+            self.boxes[box].state(["!selected"])
+
 
 '''
 Finds stage for the matfile in the reports. If not found returns EEG_Fragment with None stage
@@ -541,7 +565,7 @@ def eerCounter(stages_stat_, log_dict):
             stage_value = stages_stat[group][stage]
             group_errs[group] += multiplier*stage_value/stage_sum
         group_errs[group]=round(group_errs[group],4)
-        log_dict[group] = {stage:True if stage!=max_stage else False for stage in stages_stat[group]}
+        log_dict[group] = {stage:True if stage!=max_stage and stages_stat[group][stage]!=0 else False for stage in stages_stat[group]}
 
     return group_errs
 
