@@ -12,7 +12,7 @@ import copy
 
 
 STAGES = [-1, 0, 1, 2, 3, 4, 5, 6, 7]
-STAGE_NAMES = ["Artifacts", "Wakefulness", "1 stage", "2 stage", "3 stage", "4 stage", "5 stage",
+STAGE_NAMES = ["Artifacts(-1)", "Wakefulness(0)", "1 stage", "2 stage", "3 stage", "4 stage", "5 stage",
          "6 stage", "7 stage"]
 STAGE_NAMES = {STAGES[i]: STAGE_NAMES[i] for i in range(len(STAGES))}
 
@@ -161,14 +161,16 @@ def reportTime(string_time: str, report_path: str):  # convert string to time in
 matfile_name should looks like: folder_date_time(startSec - stopSec).mat
 '''
 def matName2Time(matfile_name: str) -> [datetime.datetime, int]:  # convert Mat file's name to date and time
-    time_delta = matfile_name.split('(')[1].split(')')[
-        0]  # this will be the number of seconds since the fragment beginning
-    if '-' in time_delta:
-        start_second = int(time_delta.split('-')[0])  # if time delta looks like 100-120
-        time_delta = int(time_delta.split('-')[1]) - int(time_delta.split('-')[0])  # time delta  = 120-100 = 20 seconds
-    else:
-        start_second = 30 * int(time_delta)  # if in only 30 seconds parts
-        time_delta = 300
+    time_delta = 300
+    if '(' in matfile_name:
+        time_delta = matfile_name.split('(')[1].split(')')[
+            0]  # this will be the number of seconds since the fragment beginning
+        if '-' in time_delta:
+            start_second = int(time_delta.split('-')[0])  # if time delta looks like 100-120
+            time_delta = int(time_delta.split('-')[1]) - int(time_delta.split('-')[0])  # time delta  = 120-100 = 20 seconds
+        else:
+            start_second = 30 * int(time_delta)  # if in only 30 seconds parts
+            time_delta = 300
 
     name = matfile_name.split('_')
     if (len(name)==2):
@@ -346,25 +348,6 @@ class CheckBoxes(tk.Frame):
     def reset(self):
         for box in self.boxes:
             self.boxes[box].state(["!selected"])
-
-
-class PlotCheckBoxes(tk.Frame):
-    def __init__(self, plot_page, check_dict):
-        tk.Frame.__init__(self, plot_page.stage_show_frame)
-        self.boxes = {}
-        row = 0
-        column = 0
-
-        for box in check_dict:
-            self.boxes[box] = ttk.Checkbutton(self, text=STAGE_NAMES[box], command=lambda: plot_page.applyStages(plot_page))
-            self.boxes[box].state(['!alternate'])
-            self.boxes[box].grid(row=row, column=column)
-            if (check_dict[box] == True):
-                self.boxes[box].state(['selected'])
-            row += 1
-
-    def state(self):
-        return {box: self.boxes[box].instate(['selected']) for box in self.boxes}
 
 
 class LogsCheckBoxes(tk.Frame):

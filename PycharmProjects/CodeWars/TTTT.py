@@ -224,7 +224,47 @@ class StartPage(tk.Tk):
         self.exit_button.grid(column=7, row=5,  sticky=(tk.W))
 
 
+class PlotCheckBoxes(tk.Frame):
+    def __init__(self, plot_page, check_dict):
+        tk.Frame.__init__(self, plot_page.stage_show_frame)
+        self.boxes = {}
+        self.names = {}
+        row = 0
+
+        for box in check_dict:
+            self.boxes[box] = ttk.Checkbutton(self, command=lambda: plot_page.applyStages(plot_page))
+            self.boxes[box].state(['!alternate'])
+            self.boxes[box].grid(row=row, column=0, padx= (10,0))
+            if (check_dict[box] == True):
+                self.boxes[box].state(['selected'])
+
+            self.names[box] = tk.Message(self, text = myPy.STAGE_NAMES[box], width = 120,  font=("Verdana", 10))
+            self.names[box].grid(row=row, column=1, sticky=(tk.N, tk.W))
+
+            row += 1
+
+    def state(self):
+        return {box: self.boxes[box].instate(['selected']) for box in self.boxes}
+
+
 class PlotPage(tk.Tk):
+
+    def drawUsedFiles(self):
+        plot = self.used_files_figure.add_subplot(111)
+        used_files = 0
+        unused_files = 0
+        for group in EEG_FRAGMENTS:
+            for fragment in EEG_FRAGMENTS[group]:
+                if fragment.stage is None:
+                    unused_files+=1
+                else:
+                    used_files+=1
+        values = [used_files, unused_files]
+        names = ["Used", "Unused"]
+        plot.pie(values, labels = names)
+        title = "Used files ratio"
+        plot.set_title(title, fontsize=10)
+        self.used_files_figure.subplots_adjust(left=0.05, bottom=0.05, right=0.95, top=0.95)
 
     def applyStages(self, root):
         root.config(cursor="wait")
@@ -257,7 +297,7 @@ class PlotPage(tk.Tk):
         tk.Tk.wm_title(self,"Plots")
 
         self.win_width = SCREEN_WIDTH
-        self.win_height = 1000
+        self.win_height = 1010
         self.x = -10
         self.y = 0
         self.geometry("{}x{}+{}+{}".format(self.win_width, self.win_height, self.x, self.y))
@@ -269,11 +309,11 @@ class PlotPage(tk.Tk):
         self.stage_show_frame = tk.Frame(self.master_frame, width = 200)
         self.stage_show_frame.grid(row=0, column=0, sticky=(tk.N, tk.W))
         self.stage_show_label = ttk.Label(self.stage_show_frame, text = "Stages", font = LARGE_FONT)
-        self.stage_show_label.grid(row=0, column=0, sticky=(tk.N, tk.W))
+        self.stage_show_label.grid(row=0, column=0, sticky=(tk.N, tk.W), padx = 10, pady = (15,10))
 
         # Stage chekboxes
-        self.stage_boxes = myPy.PlotCheckBoxes(self, STAGE_SHOW)
-        self.stage_boxes.grid( row=1, column=0, sticky=(tk.N, tk.W), padx = 10)
+        self.stage_boxes = PlotCheckBoxes(self, STAGE_SHOW)
+        self.stage_boxes.grid(row=1, column=0, sticky=(tk.N, tk.W), padx = 10)
 
 
         # Bar subplots
@@ -281,7 +321,7 @@ class PlotPage(tk.Tk):
         global LOG_DICT
         LOG_DICT = myPy.histPlotter(self.figure, EEG_STAT, STAGE_SHOW) # Which files should be logged
         self.figure_canvas = FigureCanvasTkAgg(self.figure, self.master_frame)
-        self.figure_canvas.get_tk_widget().grid(row=0, column=1, rowspan = 2, columnspan=3, sticky=(tk.N, tk.W))
+        self.figure_canvas.get_tk_widget().grid(row=0, column=1, rowspan = 3, columnspan=3, sticky=(tk.N, tk.W))
         self.figure_canvas.show()
 
         # Ketamine swapperz
@@ -290,9 +330,11 @@ class PlotPage(tk.Tk):
 
 
         # Used files pie plot
-        self.used_files_label = tk.Label(self.master_frame, text="Used files %", font = LARGE_FONT)
-        self.used_files_label.grid(row=2, column=0, sticky=(tk.N, tk.W), padx = 10)
-
+        self.used_files_figure = Figure(figsize=(1.9, 1.9), dpi=100)
+        self.drawUsedFiles()
+        self.used_files_canvas = FigureCanvasTkAgg(self.used_files_figure, self.master_frame)
+        self.used_files_canvas.get_tk_widget().grid(row=3, column=0, sticky=(tk.N, tk.W))
+        self.used_files_canvas.show()
 
         # Log window button
         self.log_button = ttk.Button(self.master_frame, text="Files in groups", width=16,
