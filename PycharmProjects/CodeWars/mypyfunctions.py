@@ -258,7 +258,7 @@ def results2Dict(results: list) -> dict:  # convert values from "'abc'\n" to "ab
 
 
 class EEG_Fragment(object):  # contain name of the eeg fragment, stage and ketamine drugs
-    def __init__(self, matfile_name: str, report: str = None, stage: int = None, ketamine: bool = None):
+    def __init__(self, matfile_name: str, report: str = None, stage: int = None, ketamine: bool = False):
         self.stage = stage
         self.day_time = matName2Time(matfile_name)[0]
         self.ketamine = ketamine
@@ -507,11 +507,15 @@ COLORS = {}
 
 def eegStat(eeg_fragments: dict):
     stages_stat = {}
+    ketamines_stat = {}
     for group in eeg_fragments:
         stages_stat[group] = {stage:0 for stage in STAGES}
-        stages_stat[group][None] = 0 # eeg without report
+        stages_stat[group][None] = 0 # fragments without report
+        ketamines_stat[group] = {stage: 0 for stage in STAGES}
         for eeg_fragment in eeg_fragments[group]:
-                stages_stat[group][eeg_fragment.stage]+=1
+            stages_stat[group][eeg_fragment.stage]+=1
+            if eeg_fragment.ketamine == True and eeg_fragment.stage in [1,2,3]:
+                ketamines_stat[group][eeg_fragment.stage] += 1
 
         empty_group = True
         for stage in STAGES:
@@ -521,6 +525,7 @@ def eegStat(eeg_fragments: dict):
                 break
         if empty_group:
             stages_stat.pop(group, None)
+            ketamines_stat.pop(group, None)
 
     global COLORS
     COLORS = {stage:0 for stage in stages_stat[list(stages_stat.keys())[0]]}
@@ -530,7 +535,7 @@ def eegStat(eeg_fragments: dict):
     for stage in COLORS:
         COLORS[stage] = colors[c]
         c+=1
-    return stages_stat
+    return stages_stat, ketamines_stat
 
 
 def eerCounter(stages_stat_, log_dict):
@@ -567,9 +572,10 @@ def explodeCalc(stages):
 
 
 
-def histPlotter(fig, stages_stat_, stage_show_):
+def histPlotter(fig, stages_stat_, ketamine_stat_, stage_show_, ketamine = False):
     fig.clf()
     stages_stat = copy.deepcopy(stages_stat_)
+    ketamines_stat = copy.deepcopy(ketamine_stat_)
     stage_show = copy.deepcopy(stage_show_)
 
     # Remove all invisible stages
@@ -577,16 +583,30 @@ def histPlotter(fig, stages_stat_, stage_show_):
         if stage_show[stage] == False:
             for group in stages_stat:
                 stages_stat[group].pop(stage, None)
+                ketamines_stat[group].pop(stage, None)
 
     for group in list(stages_stat.keys()):
-        if stages_stat[group] == {stage: 0 for stage in stages_stat[group]}:
+        if ketamine:
+            if ketamines_stat[group] == {stage: 0 for stage in ketamines_stat[group]}:
+                stages_stat.pop(group, None)
+                ketamines_stat.pop(group, None)
+        elif stages_stat[group] == {stage: 0 for stage in stages_stat[group]}:
             stages_stat.pop(group, None)
+            ketamines_stat.pop(group, None)
 
+    stages_sum = sum([sum([stages_stat[group][stage] for stage in stages_stat[group]]) for group in stages_stat])
+
+    for group in stages_stat:
+        for stage in stages_stat[group]:
+            stages_stat[group][stage] -= ketamines_stat[group][stage]
 
     stages_perc = {}
-    stages_sum = sum([sum([stages_stat[group][stage] for stage in stages_stat[group]]) for group in stages_stat])
+    ketamines_perc = {}
     for group in stages_stat:
-        stages_perc[group] = {stage: round(100*(stages_stat[group][stage]/stages_sum), 2) for stage in stages_stat[group]}
+        stages_perc[group] = {stage: round(100*(stages_stat[group][stage]/stages_sum), 2)
+                              for stage in stages_stat[group]}
+        ketamines_perc[group] = {stage: round(100*(ketamines_stat[group][stage]/stages_sum), 2)
+                              for stage in ketamines_stat[group]}
 
     high, width = recSubPlotDet(len(stages_stat)+1)
     i=1
@@ -596,9 +616,13 @@ def histPlotter(fig, stages_stat_, stage_show_):
     worst_group = max(errors, key=errors.get)
     for group in stages_stat:
         stage_positions = [stage for stage in stages_stat[group]]
-        stage_perc = [stages_perc[group][stage] for stage in stage_positions]
+        ketamine_perc = [ketamines_perc[group][stage] for stage in stage_positions]
+        stage_perc = [stages_perc[group][stage]  + ketamine_perc[stage]  for stage in stage_positions]
+
         plot = fig.add_subplot(high, width, i)
-        plot.bar(stage_positions, stage_perc, color = "#608edb")
+        plot.bar(stage_positions, stage_perc, color="#608edb")
+        plot.bar(stage_positions, ketamine_perc, color="#e54e37")
+
         if group==worst_group:
             title_color='r'
         else:
@@ -608,9 +632,12 @@ def histPlotter(fig, stages_stat_, stage_show_):
         plot.set_ylabel("Percentage")
         plot.axis([stage_positions[0] - 0.5, stage_positions[-1] + 0.5, 0, 100])
         for k in range(len(stage_positions)):
-            if stage_perc[k]==0:
+            if ketamine:
+                if ketamine_perc[k]==0:
+                    continue
+            elif stage_perc[k]==0:
                 continue
-            plot.text(stage_positions[k], stage_perc[k] + 1, str(stage_perc[k]),
+            plot.text(stage_positions[k], stage_perc[k] + 1, str(round(stage_perc[k] + ketamine_perc[k], 2)),
                           color="g", ha='center')
         i+=1
 
@@ -619,6 +646,8 @@ def histPlotter(fig, stages_stat_, stage_show_):
     plot = fig.add_subplot(high, width, high*width)
 
     all_stages_ratio = {}
+    if ketamine:
+        stages_stat = ketamines_stat
     for group in stages_stat:
         for stage in stages_stat[group]:
             if stage not in all_stages_ratio:
@@ -634,6 +663,7 @@ def histPlotter(fig, stages_stat_, stage_show_):
     title = "Distribution of all stages"
     plot.set_title(title, fontsize=10)
     plt.legend()
+    #fig.subplots_adjust(left=0.05, bottom=0.05, right=0.95, top=0.95)
     fig.subplots_adjust(left = 0.05, bottom = 0.05, right = 0.95, top = 0.95, hspace=0.2, wspace=0.25)
     return log_dict
 

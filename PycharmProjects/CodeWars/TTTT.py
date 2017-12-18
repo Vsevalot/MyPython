@@ -21,6 +21,8 @@ SAVE_PATH = ""
 REPORTS = 0
 EEG_FRAGMENTS = 0
 EEG_STAT = 0
+KETAMINE_STAT = 0
+CURRENT_PLOT = "all"
 STAGE_SHOW = {stage: False for stage in STAGES}
 STAGE_SHOW[0] = True
 STAGE_SHOW[1] = True
@@ -117,6 +119,7 @@ class StartPage(tk.Tk):
     def buildPlotsButton(self, root):
         global EEG_FRAGMENTS
         global EEG_STAT
+        global KETAMINE_STAT
 
         if RESULTS==0 or REPORTS==0:
             tk.messagebox.showwarning("Not enough files","You must choose a result file "
@@ -125,7 +128,7 @@ class StartPage(tk.Tk):
         root.config(cursor="wait")
         root.update()
         EEG_FRAGMENTS = myPy.matfiles2eegFragments(RESULTS, REPORTS)
-        EEG_STAT = myPy.eegStat(EEG_FRAGMENTS)
+        EEG_STAT, KETAMINE_STAT = myPy.eegStat(EEG_FRAGMENTS)
         root.config(cursor="")
         root.update()
         plots = PlotPage()
@@ -247,6 +250,29 @@ class PlotCheckBoxes(tk.Frame):
         return {box: self.boxes[box].instate(['selected']) for box in self.boxes}
 
 
+class PlotRadiobuttons(tk.Frame):
+    def __init__(self, plot_page):
+        tk.Frame.__init__(self,  plot_page.master_frame)
+        self.variants = [("All data", "all"), ("Ketamine only", "ketamine")]
+
+        self.label = tk.Label(self, text="Current plot:")
+        self.label.grid(row = 0, column= 0, sticky = (tk.N, tk.W), padx = 10, pady = 10)
+
+        self.buttons = []
+        i=1
+        for plot, text in self.variants:
+            self.buttons.append(ttk.Radiobutton(self, text=plot,  value=text, variable=plot_page.current_plot,
+                                               command =lambda: self.choosePlot(plot_page)))
+            self.buttons[-1].grid(row = i, column = 0,  sticky = (tk.N, tk.W), padx = 10, pady = 10)
+            i+=1
+
+    def choosePlot(self, plot_page):
+        global CURRENT_PLOT
+        CURRENT_PLOT = plot_page.current_plot.get()
+        plot_page.applyStages(plot_page)
+
+
+
 class PlotPage(tk.Tk):
 
     def drawUsedFiles(self):
@@ -264,7 +290,6 @@ class PlotPage(tk.Tk):
         plot.pie(values, labels = names)
         title = "Used files ratio"
         plot.set_title(title, fontsize=10)
-        self.used_files_figure.subplots_adjust(left=0.05, bottom=0.05, right=0.95, top=0.95)
 
     def applyStages(self, root):
         root.config(cursor="wait")
@@ -275,7 +300,10 @@ class PlotPage(tk.Tk):
             STAGE_SHOW[stage] = current_state[stage]
 
         global LOG_DICT
-        LOG_DICT = myPy.histPlotter(self.figure, EEG_STAT, STAGE_SHOW)
+        if self.current_plot.get() == "all":
+            LOG_DICT = myPy.histPlotter(self.figure, EEG_STAT, KETAMINE_STAT, STAGE_SHOW)
+        elif self.current_plot.get() == "ketamine":
+            LOG_DICT = myPy.histPlotter(self.figure, KETAMINE_STAT, KETAMINE_STAT, STAGE_SHOW, ketamine = True)
         self.figure_canvas.show()
         root.config(cursor="")
 
@@ -296,6 +324,8 @@ class PlotPage(tk.Tk):
         tk.Tk.iconbitmap(self)
         tk.Tk.wm_title(self,"Plots")
 
+        self.current_plot = tk.StringVar(master=self)
+        self.current_plot.set("all")
         self.win_width = SCREEN_WIDTH
         self.win_height = 1010
         self.x = -10
@@ -319,14 +349,14 @@ class PlotPage(tk.Tk):
         # Bar subplots
         self.figure = Figure(figsize=(13.92, 7.83), dpi=100)
         global LOG_DICT
-        LOG_DICT = myPy.histPlotter(self.figure, EEG_STAT, STAGE_SHOW) # Which files should be logged
+        LOG_DICT = myPy.histPlotter(self.figure, EEG_STAT, KETAMINE_STAT, STAGE_SHOW) # Which files should be logged
         self.figure_canvas = FigureCanvasTkAgg(self.figure, self.master_frame)
         self.figure_canvas.get_tk_widget().grid(row=0, column=1, rowspan = 3, columnspan=3, sticky=(tk.N, tk.W))
         self.figure_canvas.show()
 
-        # Ketamine swapperz
-        self.ketamine_label = tk.Label(self.master_frame, text="Ketaime", font = LARGE_FONT)
-        self.ketamine_label.grid(row=2, column=0, sticky=(tk.N, tk.W), padx = 10)
+        # Ketamine swapper
+        self.radiobuttons = PlotRadiobuttons(self)
+        self.radiobuttons.grid(row=2, column=0, sticky=(tk.N, tk.W))
 
 
         # Used files pie plot
