@@ -16,6 +16,9 @@ STAGE_NAMES = ["Artifacts(-1)", "Wakefulness(0)", "1 stage", "2 stage", "3 stage
          "6 stage", "7 stage"]
 STAGE_NAMES = {STAGES[i]: STAGE_NAMES[i] for i in range(len(STAGES))}
 
+BAR_COLOR = "#608edb"
+KETAMINE_COLOR = "#e54e37"
+
 
 def pathFromName(path:str):
     delimiter = "\\"
@@ -538,8 +541,7 @@ def eegStat(eeg_fragments: dict):
     return stages_stat, ketamines_stat
 
 
-def eerCounter(stages_stat_, log_dict):
-    stages_stat = copy.deepcopy(stages_stat_)
+def eerCounter(stages_stat, log_dict):
     group_errs={}
     for group in stages_stat:
         group_errs[group]=0
@@ -553,8 +555,8 @@ def eerCounter(stages_stat_, log_dict):
             stage_value = stages_stat[group][stage]
             group_errs[group] += multiplier*stage_value/stage_sum
         group_errs[group]=round(group_errs[group],4)
-        log_dict[group] = {stage:True if stage!=max_stage and stages_stat[group][stage]!=0 else False for stage in stages_stat[group]}
-
+        log_dict[group] = {stage:True if stage!=max_stage and stages_stat[group][stage]!=0
+                           else False for stage in stages_stat[group]}
     return group_errs
 
 
@@ -571,99 +573,187 @@ def explodeCalc(stages):
     return tuple(explodes)
 
 
+def ketaminePlotter(fig, ketamine_stat):
+    # Remove all empty groups
+    # KeyError: 'Group 2'
+    a = list(ketamine_stat.keys())
+    for g in range(len(a)):
+        if ketamine_stat[a[g]] == {stage: 0 for stage in ketamine_stat[a[g]]}:
+            ketamine_stat.pop(a[g], None)
 
-def histPlotter(fig, stages_stat_, ketamine_stat_, stage_show_, ketamine = False):
+
+    all_fragments = sum([sum([ketamine_stat[group][stage] for stage in ketamine_stat[group]])
+                         for group in ketamine_stat])
+
+    # Calculate ratio of each stage for sum of all
+    ketamine_percents = {}
+    for group in ketamine_percents:
+        ketamine_percents[group] = {stage: round(100 * (ketamine_stat[group][stage] / all_fragments), 2)
+                                    for stage in ketamine_stat[group]}
+
+    # Calculate errors
+    log_dict = {}
+    errors = eerCounter(ketamine_stat, log_dict)
+    total_err = round(sum([errors[g] for g in errors]), 3)
+    worst_group = max(errors, key=errors.get)
+    if total_err == 0:
+        worst_group = "None"
+
+    # Plotting
+    high, width = recSubPlotDet(len(ketamine_stat) + 1)
+    i = 1
+    for group in ketamine_stat:
+        stage_positions = [stage for stage in ketamine_stat[group]]
+        ketamine_percentage = [ketamine_percents[group][stage] for stage in stage_positions]
+
+
+        plot = fig.add_subplot(high, width, i)
+        plot.bar(stage_positions, ketamine_percentage, color="#e54e37")
+
+        # Title
+        if group == worst_group:
+            title_color = 'r'
+        else:
+            title_color = 'k'
+        title = "{} ; error = {}".format(group, errors[group])
+        plot.set_title(title, fontsize=10, color=title_color, position=(0.5, 0.9))
+
+        # Axis
+        plot.set_ylabel("Percentage")
+        plot.axis([stage_positions[0] - 0.5, stage_positions[-1] + 0.5, 0, 100])
+        plot.xaxis.set_ticks_position('top')
+
+        # Values on bars
+        for k in range(len(stage_positions)):
+            if ketamine_percentage[k] == 0:
+                continue
+            plot.text(stage_positions[k], ketamine_percentage[k] + 1, str(round(ketamine_percentage[k], 2)),  # Full value
+                      color=BAR_COLOR, ha='center')
+        i += 1
+
+    # Pie plot of stage ratio
+    plot = fig.add_subplot(high, width, high * width)
+
+    all_stages_ratio = {}
+    for group in ketamine_stat:
+        for stage in ketamine_stat[group]:
+            if stage not in all_stages_ratio:
+                all_stages_ratio[stage] = 0
+            all_stages_ratio[stage] += ketamine_stat[group][stage]
+    values = [all_stages_ratio[stage] for stage in all_stages_ratio]
+    all_names = [stage for stage in all_stages_ratio]
+    colors = [COLORS[stage] for stage in COLORS if stage in all_names]
+
+    plot.pie(values, labels=all_names, colors=colors)
+    err_text = "Total error = {}\nThe worst group - {}".format(total_err, worst_group)
+    plot.text(-1, -1.3, err_text, fontsize=10)
+    title = "Distribution of all stages"
+    plot.set_title(title, fontsize=10)
+    plt.legend()
+    fig.subplots_adjust(left=0.05, bottom=0.05, right=0.95, top=0.95, hspace=0.2, wspace=0.25)
+    return log_dict
+
+
+def histPlotter(fig, stages_stat_, ketamine_stat_, stage_show, ketamine_only = False):
     fig.clf()
     stages_stat = copy.deepcopy(stages_stat_)
-    ketamines_stat = copy.deepcopy(ketamine_stat_)
-    stage_show = copy.deepcopy(stage_show_)
+    ketamine_stat = copy.deepcopy(ketamine_stat_)
+    #stage_show = copy.deepcopy(stage_show_)
 
     # Remove all invisible stages
     for stage in stage_show:
         if stage_show[stage] == False:
             for group in stages_stat:
                 stages_stat[group].pop(stage, None)
-                ketamines_stat[group].pop(stage, None)
+                ketamine_stat[group].pop(stage, None)
 
-    for group in list(stages_stat.keys()):
-        if ketamine:
-            if ketamines_stat[group] == {stage: 0 for stage in ketamines_stat[group]}:
-                stages_stat.pop(group, None)
-                ketamines_stat.pop(group, None)
-        elif stages_stat[group] == {stage: 0 for stage in stages_stat[group]}:
+    if ketamine_only: # plot with only ketamine
+        return ketaminePlotter(fig, ketamine_stat)
+
+    # Remove all empty groups
+    for group in stages_stat.keys():
+        if stages_stat[group] == {stage: 0 for stage in stages_stat[group]}:
             stages_stat.pop(group, None)
-            ketamines_stat.pop(group, None)
+            ketamine_stat.pop(group, None)
 
-    stages_sum = sum([sum([stages_stat[group][stage] for stage in stages_stat[group]]) for group in stages_stat])
 
+    # sum of all used fragments
+    all_fragments = sum([sum([stages_stat[group][stage] for stage in stages_stat[group]]) for group in stages_stat])
+
+    # Calculate ratio of each stage for sum of all
+    stage_percents = {}
+    ketamine_percents = {}
     for group in stages_stat:
-        for stage in stages_stat[group]:
-            stages_stat[group][stage] -= ketamines_stat[group][stage]
-
-    stages_perc = {}
-    ketamines_perc = {}
-    for group in stages_stat:
-        stages_perc[group] = {stage: round(100*(stages_stat[group][stage]/stages_sum), 2)
+        stage_percents[group] = {stage: round(100*(stages_stat[group][stage]/all_fragments), 2)
                               for stage in stages_stat[group]}
-        ketamines_perc[group] = {stage: round(100*(ketamines_stat[group][stage]/stages_sum), 2)
-                              for stage in ketamines_stat[group]}
+        ketamine_percents[group] = {stage: round(100*(ketamine_stat[group][stage]/all_fragments), 2)
+                              for stage in ketamine_stat[group]}
 
-    high, width = recSubPlotDet(len(stages_stat)+1)
-    i=1
+    # Calculate errors
     log_dict = {}
     errors = eerCounter(stages_stat, log_dict)
     total_err = round(sum([errors[g] for g in errors]),3)
     worst_group = max(errors, key=errors.get)
+    if total_err == 0:
+        worst_group = "None"
+
+    # Plotting
+    high, width = recSubPlotDet(len(stages_stat)+1)
+    i=1
     for group in stages_stat:
         stage_positions = [stage for stage in stages_stat[group]]
-        ketamine_perc = [ketamines_perc[group][stage] for stage in stage_positions]
-        stage_perc = [stages_perc[group][stage]  + ketamine_perc[stage]  for stage in stage_positions]
+        ketamine_percentage = [ketamine_percents[group][stage] for stage in stage_positions]
+        stage_percentage = [stage_percents[group][stage] for stage in stage_positions]
 
         plot = fig.add_subplot(high, width, i)
-        plot.bar(stage_positions, stage_perc, color="#608edb")
-        plot.bar(stage_positions, ketamine_perc, color="#e54e37")
+        plot.bar(stage_positions, stage_percentage, color="#608edb")
+        plot.bar(stage_positions, ketamine_percentage, color="#e54e37")
 
+        # Title
         if group==worst_group:
             title_color='r'
         else:
             title_color='k'
         title = "{} ; error = {}".format(group, errors[group])
-        plot.set_title(title, fontsize=10, color = title_color)
+        plot.set_title(title, fontsize=10, color = title_color, position=(0.5, 0.9))
+
+        # Axis
         plot.set_ylabel("Percentage")
         plot.axis([stage_positions[0] - 0.5, stage_positions[-1] + 0.5, 0, 100])
+        plot.xaxis.set_ticks_position('top')
+
+        # Values on bars
         for k in range(len(stage_positions)):
-            if ketamine:
-                if ketamine_perc[k]==0:
-                    continue
-            elif stage_perc[k]==0:
+            if stage_percentage[k] == 0:
                 continue
-            plot.text(stage_positions[k], stage_perc[k] + 1, str(round(stage_perc[k] + ketamine_perc[k], 2)),
-                          color="g", ha='center')
+            plot.text(stage_positions[k], stage_percentage[k] + 1, str(round(stage_percentage[k], 2)), # Full value
+                          color=BAR_COLOR, ha='center')
+            if ketamine_percentage[k] == 0:
+                continue
+            plot.text(stage_positions[k], -5, str(round(ketamine_percentage[k], 2)),  # Value of ketamine fragments
+                      color=KETAMINE_COLOR, ha='center')
         i+=1
 
 
-
+    # Pie plot of stage ratio
     plot = fig.add_subplot(high, width, high*width)
 
     all_stages_ratio = {}
-    if ketamine:
-        stages_stat = ketamines_stat
     for group in stages_stat:
         for stage in stages_stat[group]:
             if stage not in all_stages_ratio:
                 all_stages_ratio[stage] = 0
             all_stages_ratio[stage] += stages_stat[group][stage]
-    all_counts = [all_stages_ratio[stage] for stage in all_stages_ratio]
+    values = [all_stages_ratio[stage] for stage in all_stages_ratio]
     all_names = [stage for stage in all_stages_ratio]
     colors = [COLORS[stage] for stage in COLORS if stage in all_names]
 
-    plot.pie(all_counts, labels = all_names, colors = colors)
+    plot.pie(values, labels = all_names, colors = colors)
     err_text = "Total error = {}\nThe worst group - {}".format(total_err, worst_group)
     plot.text(-1,-1.3, err_text, fontsize=10)
     title = "Distribution of all stages"
     plot.set_title(title, fontsize=10)
     plt.legend()
-    #fig.subplots_adjust(left=0.05, bottom=0.05, right=0.95, top=0.95)
     fig.subplots_adjust(left = 0.05, bottom = 0.05, right = 0.95, top = 0.95, hspace=0.2, wspace=0.25)
     return log_dict
 

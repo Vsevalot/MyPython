@@ -303,7 +303,7 @@ class PlotPage(tk.Tk):
         if self.current_plot.get() == "all":
             LOG_DICT = myPy.histPlotter(self.figure, EEG_STAT, KETAMINE_STAT, STAGE_SHOW)
         elif self.current_plot.get() == "ketamine":
-            LOG_DICT = myPy.histPlotter(self.figure, KETAMINE_STAT, KETAMINE_STAT, STAGE_SHOW, ketamine = True)
+            LOG_DICT = myPy.histPlotter(self.figure, KETAMINE_STAT, KETAMINE_STAT, STAGE_SHOW, ketamine_only = True)
         self.figure_canvas.show()
         root.config(cursor="")
 

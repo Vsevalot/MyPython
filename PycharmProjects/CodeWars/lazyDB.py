@@ -125,6 +125,12 @@ def getStage(matfile: str, reports: list):
     else:
         return None
 
+# path_to_files = "Z:\\Lavrov\\records5min"
+# files = [f for f in os.listdir(path_to_files) if os.path.isfile(os.path.join(path_to_files, f))]
+# with open("Z:\\Tetervak\\All_files.csv", 'w') as file:
+#     for f in files:
+#         file.write(f+'\n')
+#     file.close()
 
 
 path_to_reports = "Z:\\Tetervak\\Reports\\complete"
