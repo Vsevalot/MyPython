@@ -29,6 +29,8 @@ STAGE_SHOW[1] = True
 STAGE_SHOW[2] = True
 STAGE_SHOW[3] = True
 LOG_DICT = {}
+USED_FILES_COLOR = "#608edb"
+UNUSED_FILES_COLOR = "#a4a6a8"
 
 
 class WindowMsg(tk.Tk):
@@ -232,8 +234,7 @@ class PlotCheckBoxes(tk.Frame):
         tk.Frame.__init__(self, plot_page.stage_show_frame)
         self.boxes = {}
         self.names = {}
-        row = 0
-
+        row = 1
         for box in check_dict:
             self.boxes[box] = ttk.Checkbutton(self, command=lambda: plot_page.applyStages(plot_page))
             self.boxes[box].state(['!alternate'])
@@ -243,7 +244,6 @@ class PlotCheckBoxes(tk.Frame):
 
             self.names[box] = tk.Message(self, text = myPy.STAGE_NAMES[box], width = 120,  font=("Verdana", 10))
             self.names[box].grid(row=row, column=1, sticky=(tk.N, tk.W))
-
             row += 1
 
     def state(self):
@@ -255,7 +255,7 @@ class PlotRadiobuttons(tk.Frame):
         tk.Frame.__init__(self,  plot_page.master_frame)
         self.variants = [("All data", "all"), ("Ketamine only", "ketamine")]
 
-        self.label = tk.Label(self, text="Current plot:")
+        self.label = tk.Label(self, text="Current plot:", font=LARGE_FONT)
         self.label.grid(row = 0, column= 0, sticky = (tk.N, tk.W), padx = 10, pady = 10)
 
         self.buttons = []
@@ -263,7 +263,7 @@ class PlotRadiobuttons(tk.Frame):
         for plot, text in self.variants:
             self.buttons.append(ttk.Radiobutton(self, text=plot,  value=text, variable=plot_page.current_plot,
                                                command =lambda: self.choosePlot(plot_page)))
-            self.buttons[-1].grid(row = i, column = 0,  sticky = (tk.N, tk.W), padx = 10, pady = 10)
+            self.buttons[-1].grid(row = i, column = 0,  sticky = (tk.N, tk.W), padx = 25, pady = 10)
             i+=1
 
     def choosePlot(self, plot_page):
@@ -271,6 +271,46 @@ class PlotRadiobuttons(tk.Frame):
         CURRENT_PLOT = plot_page.current_plot.get()
         plot_page.applyStages(plot_page)
 
+
+class Legend(tk.Frame):
+    def __init__(self, parent):
+        tk.Frame.__init__(self,  parent)
+
+        rec_size = 40
+
+        # Info label
+        self.help = ttk.Label(self, text="Info", font = ("Verdana", 18))
+        self.help.grid(row=0, column=0, sticky=(tk.N,tk.W), pady=(5, 15))
+
+        # Bar color
+        self.canvas_blue = tk.Canvas(self, width=rec_size, height=rec_size)
+        self.canvas_blue.create_rectangle(0, 0, rec_size, rec_size, fill=myPy.BAR_COLOR)
+        self.canvas_blue.grid(row=1, column=0, sticky=(tk.N,tk.W), padx = 8, pady = (10, 5))
+
+        # Bar legend
+        self.bar_legend = ttk.Label(self, text="all eeg fragments", font = LARGE_FONT)
+        self.bar_legend.grid(row=1, column=1, sticky=(tk.W), pady=5)
+
+        # Ketamine color
+        self.canvas_red = tk.Canvas(self, width=rec_size, height=rec_size)
+        self.canvas_red.create_rectangle(0, 0, rec_size, rec_size, fill=myPy.KETAMINE_COLOR)
+        self.canvas_red.grid(row=2, column=0, sticky=(tk.N,tk.W), padx = 8, pady=5)
+
+        # Ketamine legend
+        self.bar_legend = ttk.Label(self, text="ketamine fragments", font = LARGE_FONT)
+        self.bar_legend.grid(row=2, column=1, sticky=(tk.W), pady=5)
+
+        # Used files ratio
+        self.files_circle = tk.Canvas(self, width=55, height=55)
+        self.files_circle.create_oval(5, 5, rec_size + 10, rec_size+10, fill=USED_FILES_COLOR)
+        self.files_circle.create_arc(5, 5, rec_size+10, rec_size+10, start=0, extent=90,
+                                          fill=UNUSED_FILES_COLOR)
+        self.files_circle.grid(row=3, column = 0, pady = 10)
+
+        # Used files legend
+        self.files_legend = tk.Message(self, text="files ratio shows\nhow many fragments got stage",
+                                       font = LARGE_FONT, width = 200)
+        self.files_legend.grid(row=3, column=1, sticky=(tk.W), pady=5)
 
 
 class PlotPage(tk.Tk):
@@ -287,7 +327,8 @@ class PlotPage(tk.Tk):
                     used_files+=1
         values = [used_files, unused_files]
         names = ["Used", "Unused"]
-        plot.pie(values, labels = names)
+        cols = [USED_FILES_COLOR, UNUSED_FILES_COLOR]
+        plot.pie(values, labels = names, colors=cols, autopct='%1.1f%%')
         title = "Used files ratio"
         plot.set_title(title, fontsize=10)
 
@@ -336,14 +377,14 @@ class PlotPage(tk.Tk):
         self.master_frame.grid(row=0, column=0, sticky=(tk.N, tk.S, tk.E, tk.W))
 
         # Stage show frame
-        self.stage_show_frame = tk.Frame(self.master_frame, width = 200)
+        self.stage_show_frame = tk.Frame(self.master_frame, width = 180)
         self.stage_show_frame.grid(row=0, column=0, sticky=(tk.N, tk.W))
         self.stage_show_label = ttk.Label(self.stage_show_frame, text = "Stages", font = LARGE_FONT)
-        self.stage_show_label.grid(row=0, column=0, sticky=(tk.N, tk.W), padx = 10, pady = (15,10))
+        self.stage_show_label.grid(row=0, column=0, sticky=(tk.N, tk.W), padx = 30, pady = (15,10))
 
         # Stage chekboxes
         self.stage_boxes = PlotCheckBoxes(self, STAGE_SHOW)
-        self.stage_boxes.grid(row=1, column=0, sticky=(tk.N, tk.W), padx = 10)
+        self.stage_boxes.grid(row=1, column=0, sticky=(tk.N, tk.W), padx = (20, 10))
 
 
         # Bar subplots
@@ -354,9 +395,15 @@ class PlotPage(tk.Tk):
         self.figure_canvas.get_tk_widget().grid(row=0, column=1, rowspan = 3, columnspan=3, sticky=(tk.N, tk.W))
         self.figure_canvas.show()
 
+
+        # Legend
+        self.legend = Legend(self.master_frame)
+        self.legend.grid(row = 0, column = 4, columnspan = 2, sticky=(tk.N, tk.W), pady = (25, 0))
+
+
         # Ketamine swapper
         self.radiobuttons = PlotRadiobuttons(self)
-        self.radiobuttons.grid(row=2, column=0, sticky=(tk.N, tk.W))
+        self.radiobuttons.grid(row=1, column=0, sticky=(tk.N, tk.W), padx = 10)
 
 
         # Used files pie plot
@@ -366,18 +413,19 @@ class PlotPage(tk.Tk):
         self.used_files_canvas.get_tk_widget().grid(row=3, column=0, sticky=(tk.N, tk.W))
         self.used_files_canvas.show()
 
+
         # Log window button
-        self.log_button = ttk.Button(self.master_frame, text="Files in groups", width=16,
+        self.log_button = ttk.Button(self.master_frame, text="Files in groups", width=20,
                                      command=self.logButton)
         self.log_button.grid(row=3, column=1, pady = (20, 20), padx = 5)
 
         # Save img button
-        self.save_img_button = ttk.Button(self.master_frame, text="Save plot", width=16,
+        self.save_img_button = ttk.Button(self.master_frame, text="Save plot", width=20,
                                           command=self.saveImg)
         self.save_img_button.grid(row=3, column=2, pady = (20, 20), padx = 5)
 
         # Close button
-        self.close_button = ttk.Button(self.master_frame, text="Close", width=10, command=self.destroy)
+        self.close_button = ttk.Button(self.master_frame, text="Close", width=20, command=self.destroy)
         self.close_button.grid(row=3, column=3)
 
 

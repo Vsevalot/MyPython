@@ -88,9 +88,20 @@ matfile_name should looks like: folder_date_time(startSec - stopSec).mat
 '''
 def matName2Time(matfile_name: str) -> [datetime.datetime, int]:  # convert Mat file's name to date and time
     time_delta = 300
+    start_second = 0
+    if '(' in matfile_name:
+        time_delta = matfile_name.split('(')[1].split(')')[0]  # this will be the number of seconds since the fragment beginning
+        start_second = int(time_delta.split('-')[0])  # if time delta looks like 100-120
+        time_delta = int(time_delta.split('-')[1]) - int(time_delta.split('-')[0])  # time delta  = 120-100 = 20 seconds
+
+
     name = matfile_name.split('_')
-    dt = datetime.datetime(int(name[-2][0:4]), int(name[-2][4:6]), int(name[-2][6:8]), int(name[-1][:2]), int(name[-1][3:5]),
-                           int(name[-1][6:8]))
+    if '(' in name[-1]:
+        name[-1] = name[-1].split('(')[0]
+
+    dt = datetime.datetime(int(name[-2][0:4]), int(name[-2][4:6]), int(name[-2][6:8]), # YYYY, MM, DD
+                           int(name[-1][:2]), int(name[-1][3:5]), # HH, MM, SS
+                           int(name[-1][6:8])) + datetime.timedelta(seconds=start_second)
     return [dt, time_delta]
 
 
@@ -100,7 +111,7 @@ def getStage(matfile: str, reports: list):
     rec = '_'.join(matfile.split('_')[:-2])
     r = [r for r in reports if ('_'.join(r.name.split('_')[:-1])==rec) and (r.records[0].time<eeg_time)
                   and (r.records[-1].time>eeg_time)]
-    if len(r)>0:
+    if len(r)>0: # if found a report with the same recXXX
         report = r[0]
         time_dif = [s.time.timestamp() - eeg_time.timestamp() for s in report.records]
         closest = time_dif.index(min([s for s in time_dif if s > 0]))
@@ -125,12 +136,13 @@ def getStage(matfile: str, reports: list):
     else:
         return None
 
-# path_to_files = "Z:\\Lavrov\\records5min"
+# path_to_files = "Z:\\Lavrov\\records30sec"
 # files = [f for f in os.listdir(path_to_files) if os.path.isfile(os.path.join(path_to_files, f))]
-# with open("Z:\\Tetervak\\All_files.csv", 'w') as file:
+# with open("Z:\\Tetervak\\All_files_30_sec.csv", 'w') as file:
 #     for f in files:
 #         file.write(f+'\n')
 #     file.close()
+# exit(0)
 
 
 path_to_reports = "Z:\\Tetervak\\Reports\\complete"
