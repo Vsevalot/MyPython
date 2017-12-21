@@ -289,7 +289,7 @@ class Legend(tk.Frame):
 
         # Bar legend
         self.bar_legend = ttk.Label(self, text="all eeg fragments", font = LARGE_FONT)
-        self.bar_legend.grid(row=1, column=1, sticky=(tk.W), pady=5)
+        self.bar_legend.grid(row=1, column=1, sticky=(tk.W), pady=5, padx = (10,0))
 
         # Ketamine color
         self.canvas_red = tk.Canvas(self, width=rec_size, height=rec_size)
@@ -298,7 +298,7 @@ class Legend(tk.Frame):
 
         # Ketamine legend
         self.bar_legend = ttk.Label(self, text="ketamine fragments", font = LARGE_FONT)
-        self.bar_legend.grid(row=2, column=1, sticky=(tk.W), pady=5)
+        self.bar_legend.grid(row=2, column=1, sticky=(tk.W), pady=5, padx = (10,0))
 
         # Used files ratio
         self.files_circle = tk.Canvas(self, width=55, height=55)
@@ -312,26 +312,73 @@ class Legend(tk.Frame):
                                        font = LARGE_FONT, width = 200)
         self.files_legend.grid(row=3, column=1, sticky=(tk.W), pady=5)
 
+        # Check buttons img
+        self.stage_img = tk.PhotoImage(file="e:\\Users\\sevamunger\\Desktop\\check.png")
+        self.canvas_stage = tk.Canvas(self, width=22, height=41)
+        self.canvas_stage.create_image(0, 22, anchor=tk.W, image=self.stage_img)
+        self.canvas_stage.image = self.stage_img
+        self.canvas_stage.grid(row=4, column=0)
 
-class PlotPage(tk.Tk):
+        # Stages help
+        self.stage_info  = tk.Message(self, text="Click on flags to change which stages should be shown",
+                                       font = LARGE_FONT, width = 200)
+        self.stage_info.grid(row=4, column=1, sticky=(tk.W), pady=5)
 
-    def drawUsedFiles(self):
+        # Radio buttons img
+        self.radio_img = tk.PhotoImage(file="e:\\Users\\sevamunger\\Desktop\\radio.png")
+        self.canvas_radio = tk.Canvas(self, width=21, height=35)
+        self.canvas_radio.create_image(0, 21, anchor=tk.W, image=self.radio_img)
+        self.canvas_radio.image = self.radio_img
+        self.canvas_radio.grid(row=5, column=0)
+
+        # Radiobutton help
+        self.radiobutton_info  = tk.Message(self, text="Use radio buttons to switch between "
+                                                 "all files and ketamine files view",
+                                       font = LARGE_FONT, width = 200)
+        self.radiobutton_info.grid(row=5, column = 1, sticky=(tk.W), pady=5)
+
+        # Error help
+        self.err_info  = tk.Message(self, text="An error shows how strong the difference "
+                                               "between the results in the group",
+                                       font = LARGE_FONT, width = 300)
+        self.err_info.grid(row=6, column=0, columnspan=2, sticky=(tk.W), pady=5)
+
+        # Error formula
+        self.err_img = tk.PhotoImage(file="e:\\Users\\sevamunger\\Desktop\\err2.png")
+        self.canvas_err = tk.Canvas(self, width=300, height=215)
+        self.canvas_err.create_image(0, 106, anchor=tk.W, image=self.err_img)
+        self.canvas_err.image = self.err_img
+        self.canvas_err.grid(row=7, column=0,columnspan=2, sticky=tk.N, pady=(10,0))
+
+
+class UsedFiles(tk.Frame):
+    def __init__(self, parent):
+        tk.Frame.__init__(self, parent)
+
+        self.used_files_figure = Figure(figsize=(1.9, 1.9), dpi=100)
+        self.used_files_canvas = FigureCanvasTkAgg(self.used_files_figure, self)
+
         plot = self.used_files_figure.add_subplot(111)
         used_files = 0
         unused_files = 0
         for group in EEG_FRAGMENTS:
             for fragment in EEG_FRAGMENTS[group]:
                 if fragment.stage is None:
-                    unused_files+=1
+                    unused_files += 1
                 else:
-                    used_files+=1
+                    used_files += 1
         values = [used_files, unused_files]
         names = ["Used", "Unused"]
         cols = [USED_FILES_COLOR, UNUSED_FILES_COLOR]
-        plot.pie(values, labels = names, colors=cols, autopct='%1.1f%%')
+        plot.pie(values, labels=names, colors=cols, autopct='%1.1f%%')
         title = "Used files ratio"
         plot.set_title(title, fontsize=10)
 
+        self.used_files_canvas.get_tk_widget().grid(row=0, column=0, sticky=(tk.N, tk.W))
+        self.used_files_canvas.show()
+
+
+class PlotPage(tk.Toplevel):
     def applyStages(self, root):
         root.config(cursor="wait")
         root.update()
@@ -351,7 +398,12 @@ class PlotPage(tk.Tk):
     def saveImg(self):
         if not os.path.exists(SAVE_PATH):
             os.makedirs(SAVE_PATH)
-        self.figure.savefig(SAVE_PATH + "\\HIST.jpg", dpi=300)
+
+        file_name = "Hist.jpg"
+        if CURRENT_PLOT=="ketamine":
+            file_name="Hist ketamine.jpg"
+        path_to_img = os.path.join(SAVE_PATH, file_name)
+        self.figure.savefig(path_to_img, dpi=300)
 
         tk.messagebox.showinfo(parent=self, title="Complete",
                                message='Figure have been successfully saved to:\n"{}"'.format(SAVE_PATH))
@@ -361,9 +413,9 @@ class PlotPage(tk.Tk):
         logs.mainloop()
 
     def __init__(self, *args, **kwargs):
-        tk.Tk.__init__(self, *args, **kwargs)
-        tk.Tk.iconbitmap(self)
-        tk.Tk.wm_title(self,"Plots")
+        tk.Toplevel.__init__(self, *args, **kwargs)
+        tk.Toplevel.iconbitmap(self)
+        tk.Toplevel.wm_title(self,"Plots")
 
         self.current_plot = tk.StringVar(master=self)
         self.current_plot.set("all")
@@ -398,7 +450,7 @@ class PlotPage(tk.Tk):
 
         # Legend
         self.legend = Legend(self.master_frame)
-        self.legend.grid(row = 0, column = 4, columnspan = 2, sticky=(tk.N, tk.W), pady = (25, 0))
+        self.legend.grid(row = 0, column = 4, rowspan = 4, sticky=(tk.N, tk.W), pady = (25, 0))
 
 
         # Ketamine swapper
@@ -407,11 +459,8 @@ class PlotPage(tk.Tk):
 
 
         # Used files pie plot
-        self.used_files_figure = Figure(figsize=(1.9, 1.9), dpi=100)
-        self.drawUsedFiles()
-        self.used_files_canvas = FigureCanvasTkAgg(self.used_files_figure, self.master_frame)
-        self.used_files_canvas.get_tk_widget().grid(row=3, column=0, sticky=(tk.N, tk.W))
-        self.used_files_canvas.show()
+        self.used_files_frame = UsedFiles(self.master_frame)
+        self.used_files_frame.grid(row=3, column=0, sticky=(tk.N, tk.W))
 
 
         # Log window button
@@ -429,27 +478,34 @@ class PlotPage(tk.Tk):
         self.close_button.grid(row=3, column=3)
 
 
-class LogPage(tk.Tk):
-
-    def drawCheckButtons(self):
+class CheckButtons(tk.Frame):
+    def __init__(self, parent):
+        tk.Frame.__init__(self, parent)
         row = 0
         column = 0
+        self.check_buttons = {}
         for group in LOG_DICT:
-            self.check_buttons_frame.columnconfigure(column, minsize=300)
-            self.group_name = ttk.Label(self.check_buttons_frame, text=group, font=LARGE_FONT)
-            self.group_name.grid(row=row, column=column,sticky=(tk.N, tk.S, tk.E, tk.W), padx=10, pady=5)
-            self.check_buttons[group] = (myPy.CheckBoxes(self.check_buttons_frame, LOG_DICT[group]))
-            self.check_buttons[group].grid(row=row + 1, column=column,sticky=(tk.N, tk.S, tk.E, tk.W), padx=5, pady=5)
+            self.columnconfigure(column, minsize=300)
+            self.group_name = ttk.Label(self, text=group, font=LARGE_FONT)
+            self.group_name.grid(row=row, column=column,sticky=(tk.N, tk.S, tk.E, tk.W), padx=100, pady=5)
+            self.check_buttons[group] = (myPy.CheckBoxes(self, LOG_DICT[group]))
+            self.check_buttons[group].grid(row=row + 1, column=column,sticky=(tk.N, tk.S, tk.E, tk.W), padx=85, pady=5)
             column+=1
             if column==3:
                 column=0
                 row+=2
 
+
+class LogPage(tk.Toplevel):
+
     def writeLogsButton(self):
         log_dict = {}
-        for group in self.check_buttons:
-            log_dict[group] = self.check_buttons[group].state()
-        myPy.writeLogs(log_dict, EEG_FRAGMENTS, SAVE_PATH)
+        for group in self.check_buttons.check_buttons:
+            log_dict[group] = self.check_buttons.check_buttons[group].state()
+        ketamine = False
+        if CURRENT_PLOT == "ketamine":
+            ketamine=True
+        myPy.writeLogs(log_dict, EEG_FRAGMENTS, SAVE_PATH, ketamine)
 
         tk.messagebox.showinfo(parent=self, title="Complete",
                                message='Logs have been successfully saved to:\n"{}"'.format(SAVE_PATH))
@@ -459,9 +515,9 @@ class LogPage(tk.Tk):
             self.check_buttons[group].reset()
 
     def __init__(self, *args, **kwargs):
-        tk.Tk.__init__(self, *args, **kwargs)
-        tk.Tk.iconbitmap(self)
-        tk.Tk.wm_title(self,"Log files")
+        tk.Toplevel.__init__(self, *args, **kwargs)
+        tk.Toplevel.iconbitmap(self)
+        tk.Toplevel.wm_title(self,"Log files")
         self.master_frame = tk.Frame(self)
         self.master_frame.grid(row=0, column=0, sticky=(tk.N, tk.S, tk.E, tk.W))
 
@@ -473,28 +529,24 @@ class LogPage(tk.Tk):
         self.instruction = tk.Message(self.master_frame, text=instruction_text, font = MEDIUM_FONT, width=930)
         self.instruction.grid( row=0, column=0, columnspan=3, sticky=(tk.N, tk.S, tk.E, tk.W), padx = 10)
 
-        # Frame for all check buttons
-        self.check_buttons_frame = tk.Frame(self.master_frame, width=930)
-        self.check_buttons_frame.grid(row=1, column=0, columnspan=3, sticky=(tk.N, tk.S, tk.E, tk.W))
-
-        # Draw check buttons
-        self.check_buttons = {}
-        self.drawCheckButtons()
+        # Check buttons
+        self.check_buttons = CheckButtons(self.master_frame)
+        self.check_buttons.grid(row=1, column=0, columnspan=3, sticky=(tk.N, tk.S, tk.E, tk.W), padx=20)
 
         # Save logs to result's folder button
         self.log_button = ttk.Button(self.master_frame, text="Write logs", width=10,
                                command=self.writeLogsButton)
-        self.log_button.grid(row=2, column=0, sticky=(tk.N), padx=10, pady=(15,5))
+        self.log_button.grid(row=2, column=0, sticky=(tk.N), padx=10, pady=(15,15))
 
         # Reset check boxes button
         self.reset_button = ttk.Button(self.master_frame, text="Reset", width=10,
                                    command=self.resetButton)
-        self.reset_button.grid(row=2, column=1, sticky=(tk.N), padx=10, pady=(15,5))
+        self.reset_button.grid(row=2, column=1, sticky=(tk.N), padx=10, pady=(15,15))
 
         # Cancel log window button
         self.cancel_button = ttk.Button(self.master_frame, text="Cancel", width=10,
                                    command=self.destroy)
-        self.cancel_button.grid(row=2, column=2, sticky=(tk.N), padx=10, pady=(15,5))
+        self.cancel_button.grid(row=2, column=2, sticky=(tk.N), padx=10, pady=(15,15))
 
 
 if __name__ == "__main__":

@@ -455,14 +455,18 @@ def write2csv(twoD_list: list, file_name: str, path2save: str = ''):
 '''
 Takes a dictionary of stages for groups which files should be write to csv and save them to the result's folder
 '''
-def writeLogs(log_dict: dict, eeg: dict, save_path: str):
+def writeLogs(log_dict: dict, eeg: dict, save_path: str, ketamine = False):
     if not os.path.exists(save_path):
         os.makedirs(save_path)
 
     for group in log_dict:
         for stage in log_dict[group]:
             if log_dict[group][stage]:
-                csv = [eeg_fragment for eeg_fragment in eeg[group] if eeg_fragment.stage == stage]
+                if ketamine:
+                    csv = [eeg_fragment for eeg_fragment in eeg[group] if eeg_fragment.stage == stage
+                           and eeg_fragment.ketamine == True]
+                else:
+                    csv = [eeg_fragment for eeg_fragment in eeg[group] if eeg_fragment.stage == stage]
                 if csv == []:
                     continue
 
@@ -474,7 +478,10 @@ def writeLogs(log_dict: dict, eeg: dict, save_path: str):
                 csv = [ ["Report : " + report_name] + [eeg_fragment.name for eeg_fragment in csv
                        if eeg_fragment.report_name == report_name] for report_name in reports]
 
-                write2csv(csv, group + ' stage ' + str(stage), save_path)
+                csv_name = "{} {} {}".format(group,"stage",stage)
+                if ketamine:
+                    csv_name = "{} ketamine".format(csv_name)
+                write2csv(csv, csv_name, save_path)
 
 
 
