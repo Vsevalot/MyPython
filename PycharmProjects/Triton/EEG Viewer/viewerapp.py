@@ -457,7 +457,6 @@ class PlotPage(tk.Toplevel):
         self.toolbar.update()
         self.toolbar.pack(side = tk.LEFT, fill = tk.BOTH, expand = True)
 
-
         # Ketamine swapper
         self.radiobuttons = PlotRadiobuttons(self)
         self.radiobuttons.grid(row=1, column=0, sticky=(tk.N, tk.W), padx = 10)

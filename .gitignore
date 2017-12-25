@@ -1,11 +1,8 @@
-*.png
 *.xls
 *.csv
 *.avi
 *.xlsx
 *.txt
-Kata.py
-TTTT.py
 *.m
 .idea/
 *.psd
