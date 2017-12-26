@@ -128,7 +128,11 @@ def getStage(matfile: str, reports: list):
                                                        report.records[i - 1].time.timestamp()
                 stages[report.records[i - 1].stage] += time_delta - sum([stages[stage] for stage in stages])
                 break
-        eeg_stage = max(stages, key=stages.get)
+
+        if sum([stages[stage] for stage in stages if stage!=-1])<30: # if the fragment has less than 30 seconds of non
+            eeg_stage = -1                                           # artefacted stages, it's an artefacted fragment
+        else:
+            eeg_stage = round(sum([stages[stage]*(stage+1) for stage in stages if stage!=-1])/(time_delta-stages[-1]))-1
         if eeg_stage in [0,1,2,3]:
             return "{};{}\n".format(matfile, eeg_stage)
         else:
@@ -152,8 +156,8 @@ REPORTS = [Report(report, myPy.readCSV(report)) for report in REPORTS]
 
 if __name__ == "__main__":
 
-    path_to_save = "Z:\\Tetervak\\File-stage.csv"
-    fragments = myPy.readCSV("Z:\\Tetervak\\All_files.csv")[0]
+    path_to_save = "Z:\\Tetervak\\File-stage_30_sec_new.csv"
+    fragments = myPy.readCSV("Z:\\Tetervak\\All_files_30_sec.csv")[0]
     fragments = [getStage(f, REPORTS) for f in fragments]
     fragments = [f for f in fragments if f is not None]
     with open(path_to_save, 'w') as file:

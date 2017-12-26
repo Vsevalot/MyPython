@@ -444,12 +444,12 @@ def write2csv(twoD_list: list, file_name: str, path2save: str = ''):
                     if k >= len(column):
                         line += ';'
                     else:
-                        line += column[k] + ';'
+                        line += str(column[k]) + ';'
                 file.write(line[:-1] + '\n')
             file.close()
         return True
-    except:
-        return False
+    except Exception as ex:
+        return str(ex)
 
 
 '''
