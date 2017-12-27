@@ -156,8 +156,8 @@ REPORTS = [Report(report, myPy.readCSV(report)) for report in REPORTS]
 
 if __name__ == "__main__":
 
-    path_to_save = "Z:\\Tetervak\\File-stage_30_sec_new.csv"
-    fragments = myPy.readCSV("Z:\\Tetervak\\All_files_30_sec.csv")[0]
+    path_to_save = "Z:\\Tetervak\\File-stage_new.csv"
+    fragments = myPy.readCSV("Z:\\Tetervak\\All_files.csv")[0]
     fragments = [getStage(f, REPORTS) for f in fragments]
     fragments = [f for f in fragments if f is not None]
     with open(path_to_save, 'w') as file:
