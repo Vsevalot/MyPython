@@ -1,22 +1,34 @@
+import pandas as pd
+import numpy as np
+
+#
+# path_to_csv = "Z:\\Tetervak\\test data.csv"
+# path_to_xlsx = "Z:\\Tetervak\\test data.xlsx"
+#
+# df_csv = pd.read_csv(path_to_csv, header=None)
+# print(df_csv.head())
+#
+# df_xlsx = pd.read_excel(path_to_xlsx, header=None)
+# print(df_xlsx[1][:5])
 
 
-import tkinter, win32api, win32con, pywintypes
+df1 = pd.DataFrame({'HPI':[80,85,88,85],
+                    'Int_rate':[2, 3, 2, 2],
+                    'US_GDP_Thousands':[50, 55, 65, 55]},
+                   index = [2001, 2002, 2003, 2004])
+
+df2 = pd.DataFrame({'HPI':[80,85,88,85],
+                    'Int_rate':[2, 3, 2, 2],
+                    'US_GDP_Thousands':[50, 55, 65, 55]},
+                   index = [2005, 2006, 2007, 2008])
+
+df3 = pd.DataFrame({'HPI':[80,85,88,85],
+                    'Unemployment':[7, 8, 9, 6],
+                    'Low_tier_HPI':[50, 52, 50, 53]},
+                   index = [2001, 2002, 2003, 2004])
 
 
+print(df1)
 
-label = tkinter.Label(text='ATM 1.5 - On', font=('Calibre','40'), fg='red', bg='black')
-label.master.overrideredirect(True)
-label.master.geometry("+20+15")
-label.master.lift()
-label.master.wm_attributes("-topmost", True)
-label.master.wm_attributes("-disabled", True)
-label.master.wm_attributes("-transparentcolor", "black")
+print(pd.merge(df1,df2, on='HPI'))
 
-hWindow = pywintypes.HANDLE(int(label.master.frame(), 16))
-# http://msdn.microsoft.com/en-us/library/windows/desktop/ff700543(v=vs.85).aspx
-# The WS_EX_TRANSPARENT flag makes events (like mouse clicks) fall through the window.
-exStyle = win32con.WS_EX_COMPOSITED | win32con.WS_EX_LAYERED | win32con.WS_EX_NOACTIVATE | win32con.WS_EX_TOPMOST | win32con.WS_EX_TRANSPARENT
-win32api.SetWindowLong(hWindow, win32con.GWL_EXSTYLE, exStyle)
-
-label.pack()
-label.mainloop()

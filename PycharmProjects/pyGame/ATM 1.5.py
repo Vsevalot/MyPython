@@ -3,10 +3,10 @@ import time
 import keyboard
 
 
-def atmLabel(root):
+def atmLabel():
     import tkinter, win32api, win32con, pywintypes
 
-    label = tkinter.Label(root, text='ATM 1.5 - On', font=('Calibre', '40'), fg='red', bg='black')
+    label = tkinter.Label(text='ATM 1.5 - On', font=('Calibre', '40'), fg='red', bg='black')
     label.master.overrideredirect(True)
     label.master.geometry("+20+15")
     label.master.lift()
@@ -21,7 +21,7 @@ def atmLabel(root):
     win32api.SetWindowLong(hWindow, win32con.GWL_EXSTYLE, exStyle)
 
     label.pack()
-    root.mainloop()
+    label.mainloop()
 
 ATM_ACTIVE = False
 SENSITIVITY = 10
