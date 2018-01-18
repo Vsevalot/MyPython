@@ -111,6 +111,8 @@ def getStage(matfile: str, reports: list):
     rec = '_'.join(matfile.split('_')[:-2])
     r = [r for r in reports if ('_'.join(r.name.split('_')[:-1])==rec) and (r.records[0].time<eeg_time)
                   and (r.records[-1].time>eeg_time)]
+
+
     if len(r)>0: # if found a report with the same recXXX
         report = r[0]
         time_dif = [s.time.timestamp() - eeg_time.timestamp() for s in report.records]
@@ -160,9 +162,9 @@ if __name__ == "__main__":
     fragments = myPy.readCSV("Z:\\Tetervak\\All_files.csv")[0]
     fragments = [getStage(f, REPORTS) for f in fragments]
     fragments = [f for f in fragments if f is not None]
-    with open(path_to_save, 'w') as file:
-        for f in fragments:
-            file.write(f)
+    # with open(path_to_save, 'w') as file:
+    #     for f in fragments:
+    #         file.write(f)
 
     print("complete")
 

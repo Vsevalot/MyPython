@@ -1,34 +1,30 @@
 import pandas as pd
 import numpy as np
 
-#
-# path_to_csv = "Z:\\Tetervak\\test data.csv"
-# path_to_xlsx = "Z:\\Tetervak\\test data.xlsx"
-#
-# df_csv = pd.read_csv(path_to_csv, header=None)
-# print(df_csv.head())
-#
-# df_xlsx = pd.read_excel(path_to_xlsx, header=None)
-# print(df_xlsx[1][:5])
+
+path_to_skipped = "Z:\\Tetervak\\skipped_records_20180116_163000.xlsx"
+path_to_file_stage = "Z:\\Tetervak\\File-stage_new.csv"
+
+df_fs = pd.read_csv(path_to_file_stage, header=None, delimiter=';')
 
 
-df1 = pd.DataFrame({'HPI':[80,85,88,85],
-                    'Int_rate':[2, 3, 2, 2],
-                    'US_GDP_Thousands':[50, 55, 65, 55]},
-                   index = [2001, 2002, 2003, 2004])
-
-df2 = pd.DataFrame({'HPI':[80,85,88,85],
-                    'Int_rate':[2, 3, 2, 2],
-                    'US_GDP_Thousands':[50, 55, 65, 55]},
-                   index = [2005, 2006, 2007, 2008])
-
-df3 = pd.DataFrame({'HPI':[80,85,88,85],
-                    'Unemployment':[7, 8, 9, 6],
-                    'Low_tier_HPI':[50, 52, 50, 53]},
-                   index = [2001, 2002, 2003, 2004])
+df_skipped = pd.read_excel(path_to_skipped, header=None)
+for i in range(len(df_skipped[0])):
+    df_skipped[0][i]=df_skipped[0][i].replace("'",'')
 
 
-print(df1)
+final = df_fs.loc[df_fs[0].isin(df_skipped[0])]
 
-print(pd.merge(df1,df2, on='HPI'))
+
+# df_skipped.set_index(0, inplace =True)
+# final.set_index(0, inplace =True)
+
+
+a = pd.merge(df_skipped, final, on=[0])
+
+a = a[a['1_x']!=a['1_y']]
+
+print(a)
+
+
 

@@ -86,7 +86,7 @@ class StartPage(tk.Tk):
         else:
             print("How did you get here?")
             root.config(cursor="")
-            exit(0)
+            exit(1)
 
         check_img = tk.PhotoImage(file="Images\\ok.png")
         results_text = "Results file selected"
