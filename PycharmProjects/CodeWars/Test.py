@@ -36,12 +36,16 @@ class PomidoroApp(tk.Tk):
         self.app_info = ttk.Label(self.frame1, text="Pomidoro app version 0.1")
         self.app_info.grid(row=0, column=0, padx=30, pady=30)\
 
-    def delay(self):
-        self.after(100, self.test)
 
-    def test(self):
-        time.sleep(3)
-        self.app_info.config(text = "BBBBBBBBBB")
+    def test(self, finish):
+        remaining_time = finish - time.time()
+        if remaining_time<=0:
+            self.app_info.config(text = "Hey!")
+        minutes = remaining_time // 60
+        seconds = int(remaining_time % 60)
+        time_txt = "{}m {}s".format(minutes, seconds)
+        self.app_info.config(text = time_txt)
+        self.app_info.after(1000, lambda: self.test(finish))
 
 
 
@@ -50,7 +54,7 @@ def idk(app):
 
 if __name__ == "__main__":
     app = PomidoroApp()
-    app.delay()
+    app.after(2000, lambda: app.test(time.time()+30))
     app.mainloop()
 
 
