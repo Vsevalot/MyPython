@@ -1,60 +1,46 @@
-import tkinter as tk
-from tkinter import ttk
-import time
-import multiprocessing
+from tkinter import *
 
-POMIDORO = 1
+credit = 0
+choice = 0
 
+credit1 = 0
+coins = 0
+prices = [200,150,160,50,90]
+item = 0
+i = 0
+temp=0
+n=0
+choice1 = 0
+choice2 = 0
 
-
-def pomidoro(start_time:float, time_step: float = 25.0):
-    finish_time = start_time+time_step*60
-    while True:
-        if time.time() < finish_time:
-            time.sleep(5)
-            continue
-        break
-    return True
-
-
-class PomidoroApp(tk.Tk):
-    def __init__(self, *args, **kwargs):
-        tk.Tk.__init__(self, *args, **kwargs)
-        tk.Tk.iconbitmap(self)
-        tk.Tk.wm_title(self,"Epic pomidoro app")
-
-        # configure window
-        self.win_width = 400
-        self.win_height = 300
-        self.x = 330
-        self.y = 200
-        self.geometry("{}x{}+{}+{}".format(self.win_width, self.win_height, self.x, self.y))
-
-        # main_frame will
-        self.frame1 = tk.Frame(self)
-        self.frame1.grid(row = 0, column = 0, sticky = "nsew")
-        self.app_info = ttk.Label(self.frame1, text="Pomidoro app version 0.1")
-        self.app_info.grid(row=0, column=0, padx=30, pady=30)\
+credit1 = 0
+coins = 0
+prices = [200,150,160,50,90]
+item = 0
+i = 0
+temp=0
+n=0
+choice1 = 0
+choice2 = 0
 
 
-    def test(self, finish):
-        remaining_time = finish - time.time()
-        if remaining_time<=0:
-            self.app_info.config(text = "Hey!")
-        minutes = remaining_time // 60
-        seconds = int(remaining_time % 60)
-        time_txt = "{}m {}s".format(minutes, seconds)
-        self.app_info.config(text = time_txt)
-        self.app_info.after(1000, lambda: self.test(finish))
+def main():
+    frame = Tk()
+    frame.geometry("480x360")
 
+    Label(frame, text="Enter coins.[Press Buttons]").grid(row=1, column=1)
+    display = Label(frame, text="") # we need this Label as a variable!
+    display.grid(row=2, column=1)
 
+    def add(amount):
+        global credit
+        credit += amount
+        display.configure(text="%.2f" % credit)
 
-def idk(app):
-    app.test()
+    Button(frame, text="10p", command=lambda: add(.1)).grid(row=3, column=1)
+    Button(frame, text="20p", command=lambda: add(.2)).grid(row=4, column=1)
+    Button(frame, text="50p", command=lambda: add(.5)).grid(row=5, column=1)
+    Button(frame, text="P1",  command=lambda: add(1.)).grid(row=6, column=1)
+    frame.mainloop()
 
-if __name__ == "__main__":
-    app = PomidoroApp()
-    app.after(2000, lambda: app.test(time.time()+30))
-    app.mainloop()
-
-
+main()
