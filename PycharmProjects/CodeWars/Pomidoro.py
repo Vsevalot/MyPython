@@ -123,12 +123,11 @@ class PomidoroPage(tk.Frame):
         self.pomidoro_info = ttk.Label(self, text=pomidoro_txt)
         self.pomidoro_info.grid(row=0, column=0, pady=30)
 
-        # Pomidoro img
-        aaa = tk.PhotoImage(file="images\\222.png")
+        # Pomidoro canvas
         self.silhouette_img = Image.open("images\\222.png")
         self.pomidoro_img  = Image.open("images\\111.png")
         self.canvas_silhouette = tk.Canvas(self, width = 200, height = 190)
-        self.canvas_silhouette.create_image(0, 0, anchor=tk.NW, image = aaa)
+        self.canvas_silhouette.create_image(0, 0, anchor=tk.NW)
         self.canvas_silhouette.grid(row = 0, column = 1, rowspan = 2, sticky=(tk.N,tk.W))
 
         # left time
@@ -169,16 +168,26 @@ class PomidoroPage(tk.Frame):
 
         # calculating images ratio
         time_step = int(self.master.master.frames[StartPage].time_step.get())*10
-        height = int(190*(remaining_time/time_step)) - 1
+        height = int(190*(remaining_time/time_step))
         pomidoro_part = self.pomidoro_img.crop((0, height, 200, 190))
         silhouette_part = self.silhouette_img.crop((0, 0, 200, height))
 
-        #
+        # makes arrays no execute vertical stack of images
         pomidoro_arr = np.asarray(pomidoro_part)
         silhouette_arr = np.asarray(silhouette_part)
-        stacked_arr = np.vstack((silhouette_arr, pomidoro_arr ))
+
+        # stacking arrays
+        if pomidoro_part.height == 0:
+            stacked_arr = silhouette_arr
+        elif silhouette_part.height == 0:
+            stacked_arr = pomidoro_arr
+        else:
+            stacked_arr = np.vstack((silhouette_arr, pomidoro_arr))
+
+        # converting arr to img
         final_img = ImageTk.PhotoImage(Image.fromarray(stacked_arr))
 
+        # updating img
         self.canvas_silhouette.create_image(0, 0, anchor=tk.NW, image = final_img )
         self.canvas_silhouette.image = final_img
         self.canvas_silhouette.update()
