@@ -135,9 +135,14 @@ for patient in data_dict: # some python magic
         for procedure in ['Theta', 'Alpha', 'BetaL', 'BetaH']:
             data_dict[patient][stage][procedure] = data_dict[patient][stage][procedure]/sum_power
 
-path_to_save = "pandas.csv"
-components = ["HRV_mean","HRV_std", "HRV_rmssd","HRV_cv","PPG_mean", "HF", "LF", "VLF", "HF/LF",
-              "PPG_std", "EDA_mean", "EDA_std", 'Theta', 'Alpha', 'BetaL', 'BetaH']
+
+# path_to_save = "pandas.csv"
+# components = ["HRV_mean","HRV_std", "HRV_rmssd","HRV_cv","PPG_mean", "HF", "LF", "VLF", "HF/LF",
+#               "PPG_std", "EDA_mean", "EDA_std", 'Theta', 'Alpha', 'BetaL', 'BetaH']
+
+path_to_save = "pandas_1.csv"
+components = ["PPG_mean", "PPG_std", "EDA_mean", "EDA_std", 'Theta', 'Alpha', 'BetaL', 'BetaH']
+
 with open(path_to_save, 'w') as file:
     line = ';'.join(components) + ";Stage\n"
     file.write(line)
