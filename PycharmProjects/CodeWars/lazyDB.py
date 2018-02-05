@@ -111,7 +111,7 @@ def getStage(matfile: str, reports: list):
     r = [r for r in reports if ('_'.join(r.name.split('_')[:-1])==rec) and (r.records[0].time<eeg_time)
                   and (r.records[-1].time>eeg_time)]
 
-    if matfile == 'rec043_20091027_09.54.25.csv':
+    if matfile == 'rec009_20090520_09.28.21.csv':
         print(matfile)
 
 
@@ -137,9 +137,14 @@ def getStage(matfile: str, reports: list):
             eeg_stage = -1                                           # artefacted stages, it's an artefacted fragment
         else: # -1 to get 0 when 1 is win cos wakefulness is 1 (stage + 1) for calculating
             eeg_stage = round(sum([stages[stage]*(stage+1) for stage in stages if stage!=-1])/
-                              (sum([stages[stage] for stage in stages if stage!=-1])))-1
-        if eeg_stage in [0,1,2,3]:
-            return "{};{}\n".format(matfile, eeg_stage)
+                              (sum([stages[stage] for stage in stages if stage!=-1]))-1,1)
+        if 0 <= eeg_stage <= 3.5:
+            ai = None
+            if eeg_stage <= 1.0:
+                ai = 100 - eeg_stage*10
+            else:
+                ai = 90 - (eeg_stage - 1)*20
+            return "{};{};{}\n".format(matfile, eeg_stage, ai)
         else:
             return None
     else:
@@ -153,8 +158,8 @@ if __name__ == "__main__":
                if os.path.isfile(os.path.join(path_to_reports, f))]
     REPORTS = [Report(report, myPy.readCSV(report)) for report in REPORTS]
 
-    path_to_save = "Z:\\Tetervak\\File-stage_30_sec_final.csv"
-    fragments = myPy.readCSV("Z:\\Tetervak\\All_files_30_sec.csv")[0]
+    path_to_save = "Z:\\Tetervak\\File-stage_test.csv"
+    fragments = myPy.readCSV("Z:\\Tetervak\\All_files.csv")[0]
     fragments = [getStage(f, REPORTS) for f in fragments]
     fragments = [f for f in fragments if f is not None]
     with open(path_to_save, 'w') as file:
