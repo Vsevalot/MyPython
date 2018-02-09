@@ -105,6 +105,15 @@ def matName2Time(matfile_name: str) -> [datetime.datetime, int]:  # convert Mat 
     return [dt, time_delta]
 
 
+def stage2ai(stage:float) -> int:
+    if stage < 0.5:
+        ai = int(100 - 20*stage)
+    elif stage < 1.5:
+        ai = int(95 - stage*10)
+    else:
+        ai = int(110 - stage*20)
+    return ai
+
 def getStage(matfile: str, reports: list):
     eeg_time, time_delta = matName2Time(matfile)
     rec = '_'.join(matfile.split('_')[:-2])
@@ -139,12 +148,10 @@ def getStage(matfile: str, reports: list):
             eeg_stage = round(sum([stages[stage]*(stage+1) for stage in stages if stage!=-1])/
                               (sum([stages[stage] for stage in stages if stage!=-1]))-1,1)
         if 0 <= eeg_stage <= 3.5:
-            ai = None
-            if eeg_stage <= 1.0:
-                ai = 100 - eeg_stage*10
-            else:
-                ai = 90 - (eeg_stage - 1)*20
-            return "{};{};{}\n".format(matfile, eeg_stage, ai)
+            if 1<eeg_stage<2:
+                print(1)
+            ai = stage2ai(eeg_stage)
+            return "{};{}\n".format(matfile, ai)
         else:
             return None
     else:
@@ -158,7 +165,7 @@ if __name__ == "__main__":
                if os.path.isfile(os.path.join(path_to_reports, f))]
     REPORTS = [Report(report, myPy.readCSV(report)) for report in REPORTS]
 
-    path_to_save = "Z:\\Tetervak\\File-stage_test.csv"
+    path_to_save = "Z:\\Tetervak\\File-stage_AI.csv"
     fragments = myPy.readCSV("Z:\\Tetervak\\All_files.csv")[0]
     fragments = [getStage(f, REPORTS) for f in fragments]
     fragments = [f for f in fragments if f is not None]
