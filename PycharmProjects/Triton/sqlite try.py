@@ -7,35 +7,48 @@ c = conn.cursor()
 def create_table(cursor, table_name: str, columns: list):
     sql_columns = ", ".join(columns)
     request = "CREATE TABLE IF NOT EXISTS {}({})".format(table_name, sql_columns)
-    print(request)
-    return
     cursor.execute(request)
 
-def add_data(cursor, table, data):
-    sql_data = ", ".join(data)
-    request = "INSERT INTO {} VALUES ({})".format(table, sql_data)
+def add_data(cursor, table, data: dict):
+    data = {key: str(data[key]) for key in data}
+    columns = list(data.keys())
+    values = [data[column] for column in columns]
+    sql_columns = "'" + "','".join(columns) + "'"
+    sql_values = "'" + "','".join(values) + "'"
+    request = "INSERT INTO {}({}) VALUES ({})".format(table, sql_columns, sql_values)
     cursor.execute(request)
     cursor.connection.commit()
 
-doctor_columns = ["ID PRIMARY KEY" ,"First_name TEXT", "Middle_name TEXT", "Second_name TEXT"]
 
-reports_columns = ["Record TEXT PRIMARY KEY", "Doctor TEXT FOREIGN KEY(Doctors) REFERENCES Doctors(Second_name)",
-                   "Operation TEXT DEFAULT VALUE 'Unknown'", "Drugs TEXT", ""]
-
-
-report_request = """
+start_request = """ 
+CREATE TABLE IF NOT EXISTS Doctors (
+	first_name	TEXT,
+	middle_name	TEXT,
+	second_name	TEXT
+);
+CREATE TABLE IF NOT EXISTS Medicine (
+	name TEXT
+);
 CREATE TABLE IF NOT EXISTS Reports (
-	Record_id	INTEGER NOT NULL UNIQUE,
-	Date	INTEGER,
-	Doctor_id	INTEGER NOT NULL,
-	Diagnosis	TEXT,
-	Drug	TEXT,
-	Electords_location	TEXT,
-	Comments	TEXT,
-	FOREIGN KEY (Doctor_id) REFERENCES Doctors(id)
+	date	INTEGER,
+	doctor_id	INTEGER NOT NULL,
+	diagnosis	TEXT,
+	medicine_id	INTEGER,
+	position_of_electrodes	TEXT,
+	comments	TEXT,
+	FOREIGN KEY (doctor_id) REFERENCES Doctors(_rowid_),
+	FOREIGN KEY (medicine_id) REFERENCES Medicine(_rowid_)
 );
 """
-print(report_request)
 
-c.execute(report_request)
+
+# doctor_data = {"first_name" : "Игорь", "middle_name": "Вячеславович", "second_name" : "Костецкий"}
+# add_data(c, "Doctors", doctor_data)
+
+medicine_data = {"name": "ketamine"}
+add_data(c, "Medicine", medicine_data)
+
+# report_data = {"Date":1, "Doctor_id": 2, "Diagnosis": "abba", "Drug": 1,
+#                "Position_of_electrodes": "here", "Comments": "All your base are belong to us"}
+# add_data(c, "Reports", report_data)
 c.connection.commit()
