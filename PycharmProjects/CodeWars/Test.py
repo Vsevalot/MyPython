@@ -1,4 +1,3 @@
-import openpyxl
 
 path = "Z:\\Tetervak\\skipped_records_20180212_162000.xlsx"
 
@@ -11,7 +10,7 @@ def findReds(xlsx_path: str) -> list:
     for row in sheet.rows:
         for cell in row:
             if cell.value is not None:
-                if cell._style_id == bad and cell.value[1:4] == 'rec':
+                if cell._style_id == bad and str(cell.value)[1:4] == 'rec':
                     reds.append(str(cell.value))
     return reds
 
