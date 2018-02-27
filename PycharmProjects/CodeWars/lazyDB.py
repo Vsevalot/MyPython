@@ -104,23 +104,22 @@ def matName2Time(matfile_name: str) -> [datetime.datetime, int]:  # convert Mat 
                            int(name[-1][6:8])) + datetime.timedelta(seconds=start_second)
     return [dt, time_delta]
 
-
 def findReds(xlsx_path: str) -> list:
     from openpyxl import load_workbook
     wb = load_workbook(filename=xlsx_path, read_only=True)
     sheet = wb[wb.get_sheet_names()[0]]
     reds = []
-    bad = wb.style_names.index("Плохой")
+    bad = 'FFFFC7CE' # code of a cell with red font and background
     for row in sheet.rows:
         for cell in row:
-            if cell.value is not None:
-                if cell._style_id == bad and str(cell.value)[1:4] == 'rec':
+            if cell.data_type == 's':
+                x = cell
+                if cell.fill.start_color.rgb == bad and (cell.value[1:4] or cell.value[0:3]) == 'rec':
                     value = str(cell.value)
                     if cell.value[0] == "'" and cell.value[-1] == "'":
                         value = value[1:-1]
                     reds.append(value)
     return reds
-
 
 def stage2ai(stage:float) -> int:
     if stage < 0.5:
@@ -137,12 +136,12 @@ def getStage(matfile: str, reports: list):
     r = [r for r in reports if ('_'.join(r.name.split('_')[:-1])==rec) and (r.records[0].time<eeg_time)
                   and (r.records[-1].time>eeg_time)]
 
-    files = ['rec014_20090528_09.30.52.csv', 'rec321_20140312_09.21.49.csv',
-             'rec056_20091228_10.51.53.csv', 'rec069_20100519_11.50.51.csv', 'rec303_20140224_13.37.29.csv']
+    files = ['rec147_20140724_11.22.54.csv', 'rec109_20140306_09.21.28.csv', 'rec148_20140724_12.11.29.csv',
+             'rec155_20140801_12.37.47.csv', 'rec303_20140224_13.27.09.csv', 'rec327_20140430_09.29.01.csv',
+             'rec514_20140404_10.11.20.csv', 'rec518_20140410_12.16.41.csv', 'rec528_20140708_10.07.32.csv']
 
     if matfile in files:
-        pass
-        #print(matfile)
+        a = 1
 
 
     if len(r)>0: # if found a report with the same recXXX
@@ -178,26 +177,37 @@ def getStage(matfile: str, reports: list):
     else:
         return None
 
+def ignoreList(path_to_skipped):
+    path_to_ignored = "Z:/Tetervak/Ignored_fragments.csv"
+    ignored_fragments = myPy.readCSV(path_to_ignored)
+    if len(ignored_fragments) > 0:
+        ignored_fragments = ignored_fragments[0]
+    to_ignore = findReds(path_to_skipped)
+    mod = 'w'
+    if os.path.exists(path_to_ignored):
+        mod = 'a'
+    with open (path_to_ignored, mod) as file:
+        for record in to_ignore:
+            if record not in ignored_fragments:
+                file.write("{}\n".format(record))
+                ignored_fragments.append(record)
+        file.close()
+    return ignored_fragments
 
 if __name__ == "__main__":
-    skipped_path = "Z:\\Tetervak\\skipped_records_20180212_162000.xlsx"
-    ignore_fragments = findReds(skipped_path)
+    skipped_path = "Z:\\Tetervak\\skipped_records_20180222_112400.xlsx"
+    ignore_fragments = ignoreList(skipped_path)
     path_to_reports = "Z:\\Tetervak\\Reports\\complete"
     REPORTS = [os.path.join(path_to_reports, f) for f in os.listdir(path_to_reports)
                if os.path.isfile(os.path.join(path_to_reports, f))]
     REPORTS = [Report(report, myPy.readCSV(report)) for report in REPORTS]
 
-
-
     path_to_save = "Z:\\Tetervak\\File-stage_AI.csv"
     fragments = myPy.readCSV("Z:\\Tetervak\\All_files.csv")[0]
     fragments = [getStage(f, REPORTS) for f in fragments if f not in ignore_fragments]
     fragments = [f for f in fragments if f is not None]
+
     with open(path_to_save, 'w') as file:
-        for f in fragments:
+        for f in fragments: 
             file.write(f)
     print("complete")
-
-
-
-

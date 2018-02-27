@@ -7,7 +7,7 @@ from math import sqrt
 from copy import deepcopy
 import matplotlib.pyplot as plt
 
-global stages
+
 stages=['Background', 'First TOVA test', 'Hyperventilation', 'Second TOVA test', 'Aftereffect']
 
 featuresNames=['Max','Min','Mean','STD','ZCR','Energy']
@@ -154,8 +154,7 @@ try:
     mdDict = Motion_Data_2_Dict(path2File)
 except:
     Tk().withdraw()
-    path2File = askopenfilename(initialdir="C:\\Users\Dante\Desktop\Новая папка",
-                               filetypes =(("CSV File", "*.csv"),("Text File", "*.txt"), ("All Files","*.*")),
+    path2File = askopenfilename(filetypes =(("CSV File", "*.csv"),("Text File", "*.txt"), ("All Files","*.*")),
                                title = "Choose motion data"
                                )
     if(path2File==''):
