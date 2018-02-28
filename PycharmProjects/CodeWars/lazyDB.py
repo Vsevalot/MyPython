@@ -104,22 +104,27 @@ def matName2Time(matfile_name: str) -> [datetime.datetime, int]:  # convert Mat 
                            int(name[-1][6:8])) + datetime.timedelta(seconds=start_second)
     return [dt, time_delta]
 
-def findReds(xlsx_path: str) -> list:
+def findStyled(xlsx_path: str) -> tuple:
     from openpyxl import load_workbook
     wb = load_workbook(filename=xlsx_path, read_only=True)
     sheet = wb[wb.get_sheet_names()[0]]
     reds = []
+    greens = []
     bad = 'FFFFC7CE' # code of a cell with red font and background
+    good = 'FFC6EFCE' # code of a cell with green font and background
     for row in sheet.rows:
         for cell in row:
             if cell.data_type == 's':
-                x = cell
-                if cell.fill.start_color.rgb == bad and (cell.value[1:4] or cell.value[0:3]) == 'rec':
-                    value = str(cell.value)
-                    if cell.value[0] == "'" and cell.value[-1] == "'":
-                        value = value[1:-1]
+                value = cell.value
+                if cell.value[0] == "'" and cell.value[-1] == "'":
+                    value = value[1:-1]
+                if cell.fill.start_color.rgb == bad and value[0:3] == "rec":
                     reds.append(value)
-    return reds
+                if cell.fill.start_color.rgb == good and value[0:3] == "rec":
+                    greens.append(value)
+                if cell.fill.start_color.rgb == good and value[0:2] == "AI" or value[0:2] == "ai":
+                    greens.append(value)
+    return reds, greens
 
 def stage2ai(stage:float) -> int:
     if stage < 0.5:
@@ -135,14 +140,7 @@ def getStage(matfile: str, reports: list):
     rec = '_'.join(matfile.split('_')[:-2])
     r = [r for r in reports if ('_'.join(r.name.split('_')[:-1])==rec) and (r.records[0].time<eeg_time)
                   and (r.records[-1].time>eeg_time)]
-
-    files = ['rec147_20140724_11.22.54.csv', 'rec109_20140306_09.21.28.csv', 'rec148_20140724_12.11.29.csv',
-             'rec155_20140801_12.37.47.csv', 'rec303_20140224_13.27.09.csv', 'rec327_20140430_09.29.01.csv',
-             'rec514_20140404_10.11.20.csv', 'rec518_20140410_12.16.41.csv', 'rec528_20140708_10.07.32.csv']
-
-    if matfile in files:
-        a = 1
-
+    files = [f for f in GOOD if f[0:3] == "rec"]
 
     if len(r)>0: # if found a report with the same recXXX
         report = r[0]
@@ -170,19 +168,19 @@ def getStage(matfile: str, reports: list):
         if 0 <= eeg_stage <= 3.5:
             ai = stage2ai(eeg_stage)
             if matfile in files:
-                print(matfile, ai)
+                print("{} should has {}, now {}".format(matfile, GOOD[GOOD.index(matfile) + 1], ai))
             return "{};{}\n".format(matfile, ai)
         else:
             return None
     else:
         return None
 
-def ignoreList(path_to_skipped):
+def ignoreList(reds):
     path_to_ignored = "Z:/Tetervak/Ignored_fragments.csv"
     ignored_fragments = myPy.readCSV(path_to_ignored)
     if len(ignored_fragments) > 0:
         ignored_fragments = ignored_fragments[0]
-    to_ignore = findReds(path_to_skipped)
+    to_ignore = reds
     mod = 'w'
     if os.path.exists(path_to_ignored):
         mod = 'a'
@@ -195,8 +193,10 @@ def ignoreList(path_to_skipped):
     return ignored_fragments
 
 if __name__ == "__main__":
+    global GOOD
     skipped_path = "Z:\\Tetervak\\skipped_records_20180222_112400.xlsx"
-    ignore_fragments = ignoreList(skipped_path)
+    bad, GOOD = findStyled(skipped_path)
+    ignore_fragments = ignoreList(bad)
     path_to_reports = "Z:\\Tetervak\\Reports\\complete"
     REPORTS = [os.path.join(path_to_reports, f) for f in os.listdir(path_to_reports)
                if os.path.isfile(os.path.join(path_to_reports, f))]
