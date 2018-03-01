@@ -8,9 +8,7 @@ LARGE_FONT = ("Verdana", 14)
 NORMAL_FONT = ("Verdana", 12)
 
 
-
 class PomidoroApp(tk.Tk):
-
     def __init__(self, *args, **kwargs):
         tk.Tk.__init__(self, *args, **kwargs)
         tk.Tk.iconbitmap(self)
@@ -48,7 +46,6 @@ class PomidoroApp(tk.Tk):
         # show start page first
         self.show_frame(StartPage)
 
-
     # Function which raises needed frame up
     def show_frame(self, page):
         frame = self.frames[page]
@@ -61,7 +58,6 @@ class PomidoroApp(tk.Tk):
 
 
 class StartPage(tk.Frame):
-
     def __init__(self, parent):
         tk.Frame.__init__(self, parent.main_frame)
 
@@ -103,7 +99,6 @@ class StartPage(tk.Frame):
         self.start_button =  ttk.Button(self, text = "Start", command = self.enter, width = 15)
         self.start_button.grid(row = 3, column = 0, columnspan = 2, padx = (60, 0), pady = (20, 0), sticky = tk.S)
 
-
     # enter processing
     def enter(self, event = None):
         self.master.master.show_frame(PomidoroPage)
@@ -114,7 +109,6 @@ class StartPage(tk.Frame):
 
 
 class PomidoroPage(tk.Frame):
-
     def __init__(self, parent):
         tk.Frame.__init__(self, parent.main_frame)
 
@@ -201,7 +195,6 @@ class PomidoroPage(tk.Frame):
 
 
 class TimeBreakPage(tk.Frame):
-
     def __init__(self, parent):
         tk.Frame.__init__(self, parent.main_frame, bg = "green")
 

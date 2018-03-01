@@ -85,7 +85,6 @@ def butter_bandpass_filter(data, lowcut, highcut, fs, order=2):
     return y
 
 def axis_feature(axis):
-
     features=[max(axis),min(axis),statistics.mean(axis),statistics.stdev(axis)]
     zcr=0
     for i in range(len(axis)):
