@@ -4,9 +4,6 @@ import datetime
 
 
 STAGES = [-1, 0, 1, 2, 3, 4, 5, 6, 7]
-# STAGE_NAMES = ["Artifacts(-1)", "Wakefulness(0)", "1 stage", "2 stage", "3 stage", "4 stage", "5 stage",
-#          "6 stage", "7 stage"]
-# STAGE_NAMES = {STAGES[i]: STAGE_NAMES[i] for i in range(len(STAGES))}
 
 
 class EEG_Fragment(object):  # contain name of the eeg fragment, stage and ketamine drugs
@@ -109,17 +106,15 @@ def findStyled(xlsx_path: str) -> tuple:
     sheet = wb[wb.get_sheet_names()[0]]
     reds = []
     greens = []
-    bad_excel = 'FFFFC7CE' # excel's code of a cell with red font and background
-    good_excel = 'FFC6EFCE' # excel's code of a cell with green font and background
-    bad_libre = 'FFFF0000' # libreoffice's code of a cell with red font and background
-    good_libre = 'FF00B050' # libreoffice's code of a cell with green font and background
-    bad = [bad_excel, bad_libre]
-    good = [good_excel, good_libre]
+
+    bad = ['FFFFC7CE', 'FFFF0000', 'FFC00000']
+    good = ['FFC6EFCE', 'FF00B050', 'FF92D050']
 
     for row in sheet.rows:
         for cell in row:
             if cell.data_type == 's':
                 value = cell.value
+                print("{} color {}".format(value, cell.fill.start_color.rgb))
                 if cell.value[0] == "'" and cell.value[-1] == "'":
                     value = value[1:-1]
                 if cell.fill.start_color.rgb in bad and value[0:3] == "rec":
@@ -128,6 +123,7 @@ def findStyled(xlsx_path: str) -> tuple:
                     greens.append(value) # green - good records which must be corrected
                 if cell.fill.start_color.rgb in good and value[0:2] == "AI" or value[0:2] == "ai":
                     greens.append(value) # AI wanted to a previous record
+
     return reds, greens
 
 def stage2ai(stage:float) -> int:

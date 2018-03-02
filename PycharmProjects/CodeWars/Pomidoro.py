@@ -196,12 +196,12 @@ class PomidoroPage(tk.Frame):
 
 class TimeBreakPage(tk.Frame):
     def __init__(self, parent):
-        tk.Frame.__init__(self, parent.main_frame, bg = "green")
+        tk.Frame.__init__(self, parent.main_frame)
 
         # Pomidoro info
         pause_txt = "{} of 4 pomidoros complete".format(parent.pomidoro)
         self.pause_info = ttk.Label(self, text=pause_txt)
-        self.pause_info.grid(row=0, column=0, pady=30)
+        self.pause_info.grid(row=0, column=0, columnspan = 4, pady=30)
 
         # Pause info
         time_break_txt = "Take a {} minutes break. Press the button when you will be ready to start the next " \
@@ -209,9 +209,14 @@ class TimeBreakPage(tk.Frame):
         self.time_break_info = ttk.Label(self, text=time_break_txt, width = 30)
         self.time_break_info.grid(row=1, column=0, sticky = tk.E)
 
+        # Pomidoros
+        self.pomidoro_img = Image.open("images\\111.png")
+        self.pomidoros = tk.Canvas(self, width=50, height=47)
+        self.pomidoros.grid(row=0, column=1, rowspan=2, sticky=(tk.N, tk.W))
+
         # Next pomidoro button
         self.stop_button =  ttk.Button(self, text = "Go next", width = 10, command = self.next_pomidoro)
-        self.stop_button.grid(row = 2, column = 0, sticky = (tk.W))
+        self.stop_button.grid(row = 3, column = 0, columnspan = 4, sticky = (tk.W))
 
     # Rises the next pomidoro frame
     def next_pomidoro(self):
@@ -231,7 +236,6 @@ class TimeBreakPage(tk.Frame):
             pomidoro_info = "All pomidoros are completed\ntake a 15 minutes brake"
             self.stop_button.config(text = 'Finish', command = self.start_frame)
         self.pause_info.config(text = pomidoro_info)
-
 
 
 if __name__ == "__main__":
