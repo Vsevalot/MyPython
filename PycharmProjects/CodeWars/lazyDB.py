@@ -1,6 +1,7 @@
 import os
 import mypyfunctions as myPy
 import datetime
+import math
 
 
 STAGES = [-1, 0, 1, 2, 3, 4, 5, 6, 7]
@@ -114,7 +115,7 @@ def findStyled(xlsx_path: str) -> tuple:
         for cell in row:
             if cell.data_type == 's':
                 value = cell.value
-                print("{} color {}".format(value, cell.fill.start_color.rgb))
+                #print("{} color {}".format(value, cell.fill.start_color.rgb))
                 if cell.value[0] == "'" and cell.value[-1] == "'":
                     value = value[1:-1]
                 if cell.fill.start_color.rgb in bad and value[0:3] == "rec":
@@ -122,6 +123,7 @@ def findStyled(xlsx_path: str) -> tuple:
                 if cell.fill.start_color.rgb in good and value[0:3] == "rec":
                     greens.append(value) # green - good records which must be corrected
                 if cell.fill.start_color.rgb in good and value[0:2] == "AI" or value[0:2] == "ai":
+                    value = value.split(',')[0]
                     greens.append(value) # AI wanted to a previous record
 
     return reds, greens
@@ -168,7 +170,9 @@ def getStage(matfile: str, reports: list):
         if 0 <= eeg_stage <= 3.5:
             ai = stage2ai(eeg_stage)
             if matfile in files:
-                print("{} should has {}, now {}".format(matfile, GOOD[GOOD.index(matfile) + 1], ai))
+                should_be = int(GOOD[GOOD.index(matfile) + 1].split('=')[-1].split(' ')[-1])
+                if abs(should_be - ai) > 3:
+                    print("{} now {}, should has {}".format(matfile, ai,  GOOD[GOOD.index(matfile) + 1]))
             return "{};{}\n".format(matfile, ai)
         else:
             return None
@@ -194,7 +198,7 @@ def ignoreList(reds):
 
 if __name__ == "__main__":
     global GOOD
-    skipped_path = "Z:\\Tetervak\\test.xlsx"
+    skipped_path = "Z:\\Tetervak\\skipped_records_20180305_113000_green.xlsx"
     bad, GOOD = findStyled(skipped_path)
     ignore_fragments = ignoreList(bad)
     path_to_reports = "Z:\\Tetervak\\Reports\\complete"
