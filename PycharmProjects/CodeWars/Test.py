@@ -1,4 +1,2 @@
-a = 0
-
-if a == 1 or 0:
-    print(1)
+a = "(d)1"
+print(a[3:])

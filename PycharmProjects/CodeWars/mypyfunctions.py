@@ -288,8 +288,6 @@ class Report(object):  # a list of records, with name, date and ketamine drugs
                 second_time = str(self.records[i].time.time())
                 self.reason = "Incorrect time order: " + first_time + '->' + second_time
 
-
-
     def __init__(self, report_path, csv):
         self.name = fileFromPath(report_path)
         if self.name[:3] == "(k)" or self.name[:3] == "(K)":
@@ -432,7 +430,7 @@ Writes a list of lists to csv
 '''
 def write2csv(twoD_list: list, file_name: str, path2save: str = ''):
     if type(twoD_list[0]) != list:
-        errMsg("You should give a list of lists to write it for csv")
+        errMsg("You should give a list of lists to write them to csv")
         exit(0)
     try:
         if path2save != '':
