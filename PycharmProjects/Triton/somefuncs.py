@@ -1,10 +1,27 @@
 import datetime
+import pandas
+import os
+import pickle
 
-STAGES = [-1, 0, 1, 2, 3, 4, 5, 6, 7]
+STAGE_AI = {-1:-1, 0: 97, 1:85, 2:70, 3:50, 4:30, 5:20, 6:10, 7:0}
 
-'''
-Gets datetime object from a string looks like 1123 or 11:23 etc 
-'''
+class ReportAI(object):
+    def __init__(self, record, diagnosis, doctor, position, medicines, comment, time_stage):
+        self.record_number = record
+        self.diagnosis = diagnosis
+        self.doctor = doctor
+        self.electrodes_position = position
+        self.medicines = medicines
+        self.comment = comment
+        self.time = [second + time_stage[0] for second in range(len(time_stage) - 1)]
+        self.stages = time_stage[1:]
+
+    def saveToPickle(self, path_to_save):
+        pickle_output = open("{}\\{}.pickle".format(path_to_save, self.record_number), 'wb')
+        pickle.dump(self, pickle_output)
+        pickle_output.close()
+
+
 def reportTime(string_time: str, report_path: str):  # convert string to time in the given report
     year = int("20" + report_path[-6:-4])
     month = int(report_path[-8:-6])
@@ -43,9 +60,6 @@ def reportTime(string_time: str, report_path: str):  # convert string to time in
         return ' '.join(["Wrong time format", ''.join(t)])
     return ' '.join(["Wrong time format", ''.join(t)])
 
-'''
-matfile_name should looks like: folder_date_time(startSec - stopSec).mat
-'''
 def matName2Time(matfile_name: str) -> [datetime.datetime, int]:  # convert Mat file's name to date and time
     time_delta = 300
     start_second = 0
@@ -64,159 +78,72 @@ def matName2Time(matfile_name: str) -> [datetime.datetime, int]:  # convert Mat 
                            int(name[-1][6:8])) + datetime.timedelta(seconds=start_second)
     return [dt, time_delta]
 
-'''
-Gets a name of a file from the file_path
-'''
-def fileFromPath(file_path: str) -> str:
-    if '\\' in file_path:
-        file_name = ''.join(file_path.split('\\')[-1])
-    elif '/' in file_path:
-        file_name = ''.join(file_path.split('/')[-1])
-    else:
-        print("File name from a path error")
-        exit(1)
-    for i in range(len(file_name) - 1, -1, -1):  # remove extension from file name
-        if file_name[i] == '.':
-            return file_name[:i]
-    return file_name
-
-
-class EEG_Fragment(object):  # contain name of the eeg fragment, stage and ketamine drugs
-    def __init__(self, matfile_name: str, report: str = None, stage: int = None, ketamine: bool = None):
-        self.stage = stage
-        self.day_time = matName2Time(matfile_name)[0]
-        self.ketamine = ketamine
-        self.name = matfile_name
-        self.report_name = report
-
-
-class Record(object):  # one line in a report ( 11:37:53 | 3 | Artifacts )
-    def __init__(self, report_path: str, time: str, stage: str, comment: str = None):
-        self.time = reportTime(time, report_path)
-        if int(stage) in STAGES:
-            self.stage = int(stage)
-        else:
-            self.stage = "Unknown stage: " + stage
-        self.comment = comment
-
-
-class Report(object):  # a list of records, with name, date and ketamine drugs
-    def chronoChecker(self):  # check that all times are in correct order
-        for i in range(1, len(self.records), 1):
-            if self.records[i].time < self.records[i - 1].time:
-                self.correct_report = False
-                first_time = str(self.records[i - 1].time.time())
-                second_time = str(self.records[i].time.time())
-                self.reason = "Incorrect time order: " + first_time + '->' + second_time
-
-    def __init__(self, report_path, csv):
-        self.name = fileFromPath(report_path)
-        if self.name[:3] == "(k)" or self.name[:3] == "(K)":
-            self.ketamine = True
-            self.name = self.name[3:]
-        else:
-            self.ketamine = False
-
-        if len(csv) < 2 or len(csv) > 3:
-            self.correct_report = False
-            self.reason = "Report should have 2 or 3 columns, got " + str(len(csv)) + " instead"
-            return
-
-        self.records = []
-        for i in range(len(csv[0])):
-            if len(csv) == 2:
-                self.records.append(Record(report_path, csv[0][i], csv[1][i]))
-            if len(csv) == 3:
-                self.records.append(Record(report_path, csv[0][i], csv[1][i], csv[2][i]))
-
-        self.correct_report = True
-        self.reason = ''
-
-        for rec in self.records:
-            if type(rec.time) != datetime.datetime:
-                self.correct_report = False
-                self.reason = rec.time
-                break
-            if type(rec.stage) != int:
-                self.correct_report = False
-                self.reason = rec.stage
-                break
-
-        if self.correct_report:
-            self.records[0].time -= datetime.timedelta(
-                seconds=10)  # set first time for 10 seconds earlier to allow 12:22:01 mat file find 12:21:59 record
-            self.records[-1].time += datetime.timedelta(
-                seconds=10)  # set last time for 10 seconds later to allow 12:22:59 mat file find 12:23:01 record
-            self.day_time = self.records[0].time
-            self.chronoChecker()
-
-# Report presented like AI from time
-class Report2(object):
-    def __init__(self, report):
-        self.time = []
-        self.ai = []
-
-        for i in range(len(report.records)):
-            seconds = report.records[i].time.timestamp()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+def medicineCounter(med_table):
+    med_cells = [cell for cell in med_table if not pandas.isnull(cell)]
+    medicines = []
+    for cell in med_cells:
+        for med in cell.split(','):
+            if med not in medicines:
+                medicines.append(med.replace(' ', ''))
+    return ', '.join(medicines)
+
+def timeFormat(time_stamps, file_name):
+    date = file_name.split('_')[-1]
+    second_stamps = []
+    for t in time_stamps["Time"]:
+        time = t.split(':')
+        second_stamps.append(int(datetime.datetime(int("20" + date[4:6]), int(date[2:4]), int(date[0:2]), # YYYY, MM, DD
+                           int(time[0]), int(time[1]), int(time[2])).timestamp())) # HH, MM, SS
+
+    if second_stamps != sorted(second_stamps):
+        print("Wrong time order")
+        exit(33)
+
+    stages = []
+    for stage in time_stamps["Stage"]:
+        stages.append(stage)
+
+    sec_stage = [second_stamps[0]] # the first element is a start second
+    for i in range(len(second_stamps) - 1):
+        step = int(second_stamps[i+1] - second_stamps[i])
+        for k in range(step):
+            sec_stage.append(stages[i]) # append stage for each second
+    return sec_stage
+
+def report2pickle(report, path_to_save = "Z:\\Tetervak\\Reports\\reports 2.0\\pickle_reports"):
+    wb = pandas.read_csv(report, delimiter=';').dropna(axis=0, how='all')
+    doctor = wb["Doctor"][0] if not pandas.isnull(wb["Doctor"][0]) else "Unknown"
+    diagnosis = wb["Diagnosis"][0] if not pandas.isnull(wb["Diagnosis"][0]) else "Unknown"
+    position = wb["Position"][0] if not pandas.isnull(wb["Position"][0]) else "Unknown"
+    medicines = medicineCounter(wb["Medicine"])
+    comment = wb["Overall comment"][0] if not pandas.isnull(wb["Overall comment"][0]) else "No comments"
+
+    time_stage = timeFormat(wb[["Time", "Stage"]], os.path.basename(report))
+
+    record_number = os.path.basename(report).split('_')
+    record_number = [i for i in record_number if i[0:3] == "rec"][0]
+
+    report = ReportAI(record = record_number,
+                      diagnosis = diagnosis,
+                      position = position,
+                      medicines = medicines,
+                      doctor = doctor,
+                      comment = comment,
+                      time_stage = time_stage)
+
+    report.saveToPickle(path_to_save)
+
+if __name__ == "__main__":
+    path_to_reports = "Z:\\Tetervak\\Reports\\reports 2.0\\complete"
+    report_list = [os.path.join(path_to_reports, f) for f in os.listdir(path_to_reports)
+                   if os.path.isfile(os.path.join(path_to_reports, f))]
+
+    for r in report_list:
+        report2pickle(r)
+
+    pickle_input = open("Z:\\Tetervak\\Reports\\reports 2.0\\pickle_reports\\rec002.pickle", 'rb')
+    test = pickle.load(pickle_input)
+    print(test.record_number)
 
 
 

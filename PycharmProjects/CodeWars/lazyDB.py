@@ -183,7 +183,7 @@ def ignoreList(reds):
     path_to_ignored = "Z:/Tetervak/Ignored_fragments.csv"
     ignored_fragments = myPy.readCSV(path_to_ignored)
     if len(ignored_fragments) > 0:
-        ignored_fragments = ignored_fragments[0]
+        ignored_fragments = [f[:-4] for f in ignored_fragments[0]]
     to_ignore = reds
     mod = 'w'
     if os.path.exists(path_to_ignored):
@@ -192,13 +192,13 @@ def ignoreList(reds):
         for record in to_ignore:
             if record not in ignored_fragments:
                 file.write("{}\n".format(record))
-                ignored_fragments.append(record)
+                ignored_fragments.append(record[:-4])
         file.close()
     return ignored_fragments
 
 if __name__ == "__main__":
     global GOOD
-    skipped_path = "Z:\\Tetervak\\skipped_records_20180305_113000_green.xlsx"
+    skipped_path = "Z:\\Tetervak\\working.xlsx"
     bad, GOOD = findStyled(skipped_path)
     ignore_fragments = ignoreList(bad)
     path_to_reports = "Z:\\Tetervak\\Reports\\complete"
@@ -206,10 +206,12 @@ if __name__ == "__main__":
                if os.path.isfile(os.path.join(path_to_reports, f))]
     REPORTS = [Report(report, myPy.readCSV(report)) for report in REPORTS]
 
-    path_to_save = "Z:\\Tetervak\\File-stage_AI.csv"
-    fragments = myPy.readCSV("Z:\\Tetervak\\All_files.csv")[0]
-    fragments = [getStage(f, REPORTS) for f in fragments if f not in ignore_fragments]
+    path_to_save = "Z:\\Tetervak\\File-stage_AI_30_sec.csv"
+    fragments = myPy.readCSV("Z:\\Tetervak\\All_records_30_sec.csv")[0]
+    fragments = [getStage(f, REPORTS) for f in fragments if f[:24] not in ignore_fragments]
+
     fragments = [f for f in fragments if f is not None]
+
 
     with open(path_to_save, 'w') as file:
         for f in fragments: 
