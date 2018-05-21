@@ -4,6 +4,10 @@ import telebot
 
 bot = telebot.TeleBot(config.token)
 
+
+
+
+
 @bot.message_handler(func=lambda message: True, content_types=['text'])
 def sendEchoMsg(message):
     if message.chat.first_name=="Vitaly":
