@@ -72,9 +72,13 @@ if __name__ == "__main__":
     quick_fix_df = error_df[error_df.error_value <= 30]
     quick_fix_df["average"] = (quick_fix_df.report_ai + quick_fix_df.classifier_ai)/2
     big_error_df =  error_df[error_df.error_value > 30]
-    big_error_df = big_error_df.sort_values(["error_fragments", "start_second"])
+    big_error_df["rec"] = big_error_df["error_fragments"].apply(lambda x: x.split('_')[0])
+    big_error_df = big_error_df.sort_values(["rec", "start_second"])
 
     in_row_df, not_row_df = compareRows(big_error_df)
+    print(in_row_df.head())
+    exit(33)
+    in_row_df.to_csv("E:\\test\\more_than_30_in_row.csv", sep=';',  encoding='utf-8', index=True)
 
     not_row_df["error_fragments"].to_csv("E:\\test\\more_than_30_artifacts.csv", sep = ';', index = False)
 

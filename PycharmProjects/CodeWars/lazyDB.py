@@ -200,15 +200,18 @@ if __name__ == "__main__":
     global GOOD
     skipped_path = "Z:\\Tetervak\\working.xlsx"
     bad, GOOD = findStyled(skipped_path)
-    ignore_fragments = ignoreList(bad)
+    ignore_fragments = myPy.readCSV("Z:/Tetervak/Ignored_fragments.csv")[0]
+    ignore_fragments = [f[:-4] for f in ignore_fragments]
+    ignore_fragments = []
     path_to_reports = "Z:\\Tetervak\\Reports\\complete"
     REPORTS = [os.path.join(path_to_reports, f) for f in os.listdir(path_to_reports)
                if os.path.isfile(os.path.join(path_to_reports, f))]
     REPORTS = [Report(report, myPy.readCSV(report)) for report in REPORTS]
 
-    path_to_save = "Z:\\Tetervak\\File-stage_AI_30_sec.csv"
+    path_to_save = "Z:\\Tetervak\\File-stage_AI_30_sec_test.csv"
     fragments = myPy.readCSV("Z:\\Tetervak\\All_records_30_sec.csv")[0]
-    fragments = [getStage(f, REPORTS) for f in fragments if f[:24] not in ignore_fragments]
+
+    fragments = [getStage(f, REPORTS) for f in fragments if f[:-4] not in ignore_fragments]
 
     fragments = [f for f in fragments if f is not None]
 

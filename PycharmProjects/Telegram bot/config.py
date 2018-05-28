@@ -27,14 +27,14 @@ if __name__ == '__main__':
 
         closest_bus = ':'.join(str(closest_bus).split(':')[:2])
         time_remaining = time_remaining.split(':')
-        if time_remaining[0] == '0':
+        if time_remaining[0] == '0': # The number of hours == 0
             remaining_string = "{} minutes {} seconds".format(time_remaining[1], time_remaining[2])
         else:
             remaining_string = "{} hours {} minutes {} seconds".format(time_remaining[0], time_remaining[1], time_remaining[2])
 
 
 
-        message = "The closest bus at {} \U0001f86b\n" \
+        message = "The closest bus at {} \U0001f86c\n" \
                   "Time remaining: {}".format(closest_bus, remaining_string)
         return message
 
