@@ -6,6 +6,23 @@ from datetime import datetime, timedelta
 
 import lab_settings as lab
 
+"""
+This function gives a dataSource dictionary from json file or default one
+
+"""
+def give_source(data_source = ''):
+    if data_source[-4:] == 'json':
+        return json.load(data_source)
+    elif data_source == "accelerometer":
+        return lab.data_source_accelerometer
+    elif data_source == "power":
+        return lab.data_source_power
+    else:
+        print("Visit https://developers.google.com/fit/rest/v1/reference/users/dataSources to learn how to create "
+              "your own data source.")
+        print('Give a path to a dataSource json file or set argument to "accelerometer" or "power" to use default lab '
+              'data sources')
+        exit(0)
 
 
 CLEAR_START = True # Set True if you want to start the lab from the beginning
@@ -79,10 +96,10 @@ def create_eeg_source():
     fit_users.dataSources().create(userId='me', body=data_source_eeg).execute()
 
 def create_eeg_datapoint(dataSourceId, dataTypeName):
-    if lab.eeg_data_format == "integer":
+    if lab.power_data_format == "integer":
         format = "intVal"
-    elif lab.eeg_data_format == "float":
-        format = "fpVal"
+    elif lab.power_data_format == "floatPoint":
+        format = "floatPoint"
     else:
         format = "unknown"
         print("Unknown data format")
@@ -147,7 +164,7 @@ def create_acce_datapoint(dataSourceId, dataTypeName):
 
 if __name__ == "__main__":
     # Create a flow
-    path_to_secret = "client_secret.json"
+    path_to_secret = "client_secret.json" # Set path to your client_secret.json here
     flow = InstalledAppFlow.from_client_secrets_file(
         path_to_secret,
         scopes=["email profile",
@@ -161,23 +178,43 @@ if __name__ == "__main__":
     credentials = flow.run_local_server(host='localhost',
                                         port=8080,
                                         authorization_prompt_message='Please visit this URL: {url}',
-                                        success_message='The auth flow is complete; you may close this window.',
+                                        success_message='The auth authorization is complete. Close this tab.',
                                         open_browser=True)
+    # Activate fitness service
     fit_service = build('fitness', 'v1', credentials=credentials)
-    fit_users = fit_service.users()
-    fit_dataSources = fit_users.dataSources()
-    request = fit_dataSources.list(userId='me')
-    dataSources_list = (request.execute())['dataSource']
 
-    if CLEAR_START: # Delete all previous data sources
-        for sourceId in dataSources_list:
-            fit_dataSources.delete(userId='me', dataSourceId=sourceId['dataStreamId'])
+    # Work with account user
+    fit_users = fit_service.users()
+
+    fit_dataSources = fit_users.dataSources()
+    dataSources_list = (fit_users.dataSources().list(userId='me').execute())['dataSource']
+
+    datasetId = "{}-{}".format(int((datetime.now() + timedelta(days=-1)).timestamp() * 1000000000),
+                               int((datetime.now() + timedelta(hours=+1)).timestamp() * 1000000000))
+
+    if CLEAR_START: # Delete all existing data sources
+        for sourceID in dataSources_list:
+            for datapoint in dataSources_list:
+                fit_dataSources.datasets().delete(userId='me',
+                                                 dataSourceId=sourceID['dataStreamId'],
+                                                 datasetId=datasetId).execute()
+            fit_dataSources.delete(userId='me', dataSourceId=sourceID['dataStreamId']).execute()
+        dataSources_list = []
+
 
     if dataSources_list == []: # If there is no data sources in the project
         # Create your own data sources
-        create_acce_source() # accelerometer
-        create_eeg_source() # eeg
-        dataSources_list = (request.execute())['dataSource']
+        acce_source = give_source("accelerometer") # accelerometer
+        a = fit_users.dataSources().create(userId='me', body=acce_source).execute()
+
+        f = open("source_acce.json", 'w')  # save your new dataSource to json
+        json.dump(a, f, sort_keys=True, indent=4)
+        f.close()
+        exit(33)
+
+        power_source = give_source("power") # power
+        fit_users.dataSources().create(userId='me', body=power_source).execute()
+        dataSources_list = (fit_dataSources.list(userId='me').execute())['dataSource']
 
     dataSources_dict = {source['name']: source for source in dataSources_list}
 
@@ -185,8 +222,9 @@ if __name__ == "__main__":
     acce_data_point = create_acce_datapoint(dataSources_dict["accelerometer"]["dataStreamId"],
                                             dataSources_dict["accelerometer"]["dataType"])
 
-    eeg_data_point = create_eeg_datapoint(dataSources_dict["eeg"]["dataStreamId"],
-                                            dataSources_dict["eeg"]["dataType"])
+
+    eeg_data_point = create_eeg_datapoint(dataSources_dict["band power"]["dataStreamId"],
+                                            dataSources_dict["band power"]["dataType"])
 
     acce_request = fit_dataSources.datasets().patch(userId='me',
                                                     dataSourceId=acce_data_point['dataSourceId'],
@@ -200,8 +238,12 @@ if __name__ == "__main__":
                                                                              eeg_data_point["maxEndTimeNs"]),
                                                     body=eeg_data_point).execute()
 
-    datasetId = "1527996882233987072-1528004082233987072"
+    datasetId = "{}-{}".format(int((datetime.now() + timedelta(minutes=-1)).timestamp()*1000000000),
+                               int((datetime.now() + timedelta(hours=+1)).timestamp() * 1000000000))
     request = fit_dataSources.datasets().get(userId='me',
                                              dataSourceId=dataSources_dict["accelerometer"]["dataStreamId"],
                                              datasetId=datasetId).execute()
+
+    print(request)
+
     print(1)

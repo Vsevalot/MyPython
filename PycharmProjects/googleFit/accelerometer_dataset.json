@@ -1,0 +1,39 @@
+{
+    "dataSourceId": "raw:accelerometer data:bci_study_accelerometer",
+    "maxEndTimeNs": "1528105438963260928",
+    "minStartTimeNs": "1528101778963260928",
+    "point": [
+        {
+            "dataTypeName": {
+                "field": [
+                    {
+                        "format": "integer",
+                        "name": "ax"
+                    },
+                    {
+                        "format": "integer",
+                        "name": "ay"
+                    },
+                    {
+                        "format": "integer",
+                        "name": "az"
+                    }
+                ],
+                "name": "accelerometer data"
+            },
+            "endTimeNanos": "1528101838963260928",
+            "startTimeNanos": "1528101838963260928",
+            "value": [
+                {
+                    "integer": "310"
+                },
+                {
+                    "integer": "-59"
+                },
+                {
+                    "integer": "-181"
+                }
+            ]
+        }
+    ]
+}

@@ -23,7 +23,7 @@ class Window(QtWidgets.QMainWindow):
         shaman_king_action.setShortcut('Ctrl+S')
         shaman_king_action.setStatusTip('Be the shaman king')
 
-        shaman_king_action.triggered.connect(lambda: self.ask_msg)
+        shaman_king_action.triggered.connect(self.ask_msg)
         self.statusBar()
         menubar = self.menuBar()
         fileMenu = menubar.addMenu('&File')
@@ -35,7 +35,13 @@ class Window(QtWidgets.QMainWindow):
         toolbar.setMovable(False)
 
     def ask_msg(self):
-        return
+        choice = QtWidgets.QMessageBox.question(self, "Title", "This is question",
+                                                QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
+
+        if choice == QtWidgets.QMessageBox.Yes:
+            print("AAA")
+        else:
+            print("BBB")
 
 
 
