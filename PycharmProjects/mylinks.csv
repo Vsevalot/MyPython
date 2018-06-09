@@ -8,10 +8,13 @@ Neuronets;https://www.youtube.com/watch?list=PLDywto_IU4_4nP7LUZRzQ5QKoglE-WBtT&
 ;Neuronet playlist;;;
 Ubuntu/ Linux;https://www.youtube.com/watch?list=PLY4rE9dstrJycywkq8M37bXoJJ922hpB6&time_continue=116&v=6MniYXvQvVo;https://www.youtube.com/watch?list=PLwlmWHdR-P_oQbu6F4b8EkAw5gxCWmYI5&v=mpdXVA9B7-U;;
 ;;;;
-English;https://www.dancarlin.com/hardcore-history-series/;;;
-;History podcasts;;;
-Python;https://tproger.ru/translations/python-gui-pyqt/;https://khashtamov.com/ru/create-telegram-bot-in-python/;;
-;QT GUI;pybot;;
+English;https://www.dancarlin.com/hardcore-history-series/;https://www.youtube.com/watch?v=PYg9rI_2Wuo;https://takeielts.britishcouncil.org/prepare-test/free-practice-tests;https://www.youtube.com/watch?v=JYM1_45TaIA
+;History podcasts;IELTS;free practice;templates
+Python;https://tproger.ru/translations/python-gui-pyqt/;https://khashtamov.com/ru/create-telegram-bot-in-python/;https://www.youtube.com/watch?v=ivcxZSHL7jM;
+;QT GUI;pybot;pyqt5 threads;
 Computer scince;https://github.com/jwasham/coding-interview-university;https://tproger.ru/curriculum/computer-science-step-by-step/?utm_source=grf-eng&utm_medium=partner&utm_campaign=giraff.io;https://tproger.ru/articles/google-guide-to-programming/?utm_source=grf-eng&utm_medium=partner&utm_campaign=giraff.io;
 ;Overall;books;google list;
 Neuronets;https://habr.com/users/alexeyr/posts/page3/;;;
+;;;;
+regexp;https://regexper.com/#-%3F%5Cd%2B%28%5C.%5Cd%2B%29%3F;;;
+;visualisation of regural expressions;;;

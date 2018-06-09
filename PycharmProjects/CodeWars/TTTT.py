@@ -1,53 +1,68 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
+"""
+ZetCode PyQt5 tutorial
+
+This example shows text which
+is entered in a QLineEdit
+in a QLabel widget.
+
+Author: Jan Bodnar
+Website: zetcode.com
+Last edited: August 2017
+"""
+
 import sys
-from PyQt5 import QtGui, QtWidgets, QtCore
+from PyQt5.QtWidgets import (QWidget, QLabel, QFontComboBox, QComboBox,
+                             QLineEdit, QApplication)
 
 
 
-class Window(QtWidgets.QMainWindow):
+
+
+class Example(QWidget):
 
     def __init__(self):
-        super(Window, self).__init__()
-        self.setGeometry(500, 400, 500, 300)
-        self.setWindowTitle('Test')
-        path_to_icon = "e:\\Users\\sevamunger\\Documents\\GitHub\\MyPython\\PycharmProjects\\qtDesigner\\favicon.png"
-        self.setWindowIcon(QtGui.QIcon(path_to_icon))
-        btn = QtWidgets.QPushButton("Quit", self)
-        btn.setGeometry(150, 150, 50, 50)
-        btn.clicked.connect(lambda: print(1))
-        btn.setToolTip("<b>Formatted text</b> can also be displayed.")
+        super().__init__()
 
-        shaman_king_action = QtWidgets.QAction(QtGui.QIcon(path_to_icon), "&WANNA some sprit-fight?", self)
-        shaman_king_action.setShortcut('Ctrl+S')
-        shaman_king_action.setStatusTip('Be the shaman king')
+        self.initUI()
 
-        shaman_king_action.triggered.connect(self.ask_msg)
-        self.statusBar()
-        menubar = self.menuBar()
-        fileMenu = menubar.addMenu('&File')
-        fileMenu.addAction(shaman_king_action)
+    def initUI(self):
+        self.lbl = QLabel(self)
+        qle = QLineEdit(self)
 
-        toolbar = self.addToolBar("left")
-        toolbar.addAction(shaman_king_action)
-        toolbar.setOrientation(QtCore.Qt.Horizontal)
-        toolbar.setMovable(False)
+        qle.move(60, 100)
+        self.lbl.move(60, 40)
 
-    def ask_msg(self):
-        choice = QtWidgets.QMessageBox.question(self, "Title", "This is question",
-                                                QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
+        qle.textChanged[str].connect(self.onChanged)
 
-        if choice == QtWidgets.QMessageBox.Yes:
-            print("AAA")
-        else:
-            print("BBB")
+        combo = QFontComboBox(self)
+        combo.removeItem(-1)
+        combo.addItem("AAAAAAAAAAAA")
 
+        combob = QComboBox(self)
+
+        combo.move(50, 50)
+        self.lbl.move(50, 150)
+
+        combo.activated[str].connect(self.onActivated)
+
+
+        self.setGeometry(300, 300, 280, 170)
+        self.setWindowTitle('QLineEdit')
+        self.show()
+
+    def onActivated(self, text):
+        self.lbl.setText(text)
+        self.lbl.adjustSize()
+
+    def onChanged(self, text):
+        self.lbl.setText(text)
+        self.lbl.adjustSize()
 
 
 if __name__ == '__main__':
-
-    app = QtWidgets.QApplication(sys.argv)
-    w = Window()
-    w.show()
+    app = QApplication(sys.argv)
+    ex = Example()
     sys.exit(app.exec_())

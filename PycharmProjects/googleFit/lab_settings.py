@@ -4,7 +4,8 @@ accelerometer_stream_name = "bci_study_accelerometer" # your accelerometer data 
 accelerometer_data_format = "integer" # accelerometer data format
 
 power_stream_name = "bci_study_power" # your eeg data stream name
-power_data_format = "integer" # eeg data format
+power_data_format = "floatPoint" # eeg data format
+
 
 """
 Visit https://developers.google.com/fit/rest/v1/reference/users/dataSources to learn how to create your own data source.
@@ -31,6 +32,10 @@ data_source_accelerometer = {
             {
                 "name": "az",
                 "format": accelerometer_data_format
+            },
+            {
+                "name": "bestSortOfPizza", # just example field to show string variables
+                "format": "string"
             }
         ]
     }
@@ -38,14 +43,14 @@ data_source_accelerometer = {
 
 data_source_power = {
     "dataStreamName": power_stream_name,
-    "name": "band power",
+    "name": "band_power",
     "type": "raw",
     "application": {
         "name": application_name,
         "version": "1"
     },
     "dataType": {
-        "name": "eeg band power",
+        "name": "eeg_band_power",
         "field": [
             {
                 "name": "theta",
@@ -66,4 +71,3 @@ data_source_power = {
         ]
     }
 }
-
