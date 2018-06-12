@@ -1,0 +1,1 @@
+print('autosave'[:3], 'autosave'[3:])
