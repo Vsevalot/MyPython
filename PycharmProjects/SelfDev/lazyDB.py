@@ -2,6 +2,7 @@ import os
 import mypyfunctions as myPy
 import datetime
 import math
+import pandas as pd
 
 
 STAGES = [-1, 0, 1, 2, 3, 4, 5, 6, 7]
@@ -142,7 +143,7 @@ def getStage(matfile: str, reports: list):
     rec = '_'.join(matfile.split('_')[:-2])
     r = [r for r in reports if ('_'.join(r.name.split('_')[:-1])==rec) and (r.records[0].time<eeg_time)
                   and (r.records[-1].time>eeg_time)]
-    files = [f for f in GOOD if f[0:3] == "rec"]
+    files = []
 
     if len(r)>0: # if found a report with the same recXXX
         report = r[0]
@@ -169,10 +170,6 @@ def getStage(matfile: str, reports: list):
                               (sum([stages[stage] for stage in stages if stage!=-1]))-1,1)
         if 0 <= eeg_stage <= 3.5:
             ai = stage2ai(eeg_stage)
-            if matfile in files:
-                should_be = int(GOOD[GOOD.index(matfile) + 1].split('=')[-1].split(' ')[-1])
-                if abs(should_be - ai) > 3:
-                    print("{} now {}, should has {}".format(matfile, ai,  GOOD[GOOD.index(matfile) + 1]))
             return "{};{}\n".format(matfile, ai)
         else:
             return None
@@ -197,25 +194,32 @@ def ignoreList(reds):
     return ignored_fragments
 
 if __name__ == "__main__":
-    global GOOD
-    skipped_path = "Z:\\Tetervak\\working.xlsx"
-    bad, GOOD = findStyled(skipped_path)
-    ignore_fragments = myPy.readCSV("Z:/Tetervak/Ignored_fragments.csv")[0]
-    ignore_fragments = [f[:-4] for f in ignore_fragments]
-    ignore_fragments = []
     path_to_reports = "Z:\\Tetervak\\Reports\\complete"
     REPORTS = [os.path.join(path_to_reports, f) for f in os.listdir(path_to_reports)
                if os.path.isfile(os.path.join(path_to_reports, f))]
     REPORTS = [Report(report, myPy.readCSV(report)) for report in REPORTS]
+    ignore_fragments = list(pd.read_excel("Z:\\Tetervak\\skipped\\24.07.18\\cut_records.xlsx", header=None)[0].values)
+    ignore_fragments = [f.replace("'", '') for f in ignore_fragments]
 
-    path_to_save = "Z:\\Tetervak\\File-stage_AI_30_sec_test.csv"
-    fragments = myPy.readCSV("Z:\\Tetervak\\All_records_30_sec.csv")[0]
+    fixed_less_30 =  pd.read_csv("Z:\\Tetervak\\skipped\\24.07.18\\less_30_fixed.csv", sep=';', encoding='utf-8')
+    fixed_streaks =  pd.read_csv("Z:\\Tetervak\\skipped\\24.07.18\\streaks_fixed.csv", sep=';', encoding='utf-8')
+    fixed = pd.concat([fixed_less_30, fixed_streaks])
+    fixed_names = list(fixed["error_fragment"].values)
+    fixed_names = [f.replace("'", '') for f in fixed_names]
+    fixed_ai = list(fixed["fixed_ai"].values)
+    ignore_fragments += fixed_names
 
-    fragments = [getStage(f, REPORTS) for f in fragments if f[:-4] not in ignore_fragments]
-
+    path_to_save = "Z:\\Tetervak\\file - stage\\File-stage_AI_30_sec.csv"
+    fragments = myPy.readCSV("Z:\\Tetervak\\fragments\\All_fragments_30_sec.csv")[0]
+    print(len(fragments), len(ignore_fragments))
+    fragments = [getStage(f, REPORTS) for f in fragments if f not in ignore_fragments]
+    print(len(fragments))
     fragments = [f for f in fragments if f is not None]
-
-
+    print(len(fragments))
+    fixed_fragments = ["{};{}\n".format(fixed_names[i], round(fixed_ai[i], 1)) for i in range(len(fixed_ai))
+                       if fixed_ai[i] < 100.1]
+    fragments += fixed_fragments
+    print(len(fragments), len(fixed_fragments))
     with open(path_to_save, 'w') as file:
         for f in fragments: 
             file.write(f)

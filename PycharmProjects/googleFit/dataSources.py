@@ -27,14 +27,20 @@ if __name__ == "__main__":
               'https://www.googleapis.com/auth/fitness.body.read',
               'https://www.googleapis.com/auth/fitness.body.write']
 
-    flow = InstalledAppFlow.from_client_secrets_file(path_to_secret, scopes=scopes)
+    try:
+        flow = InstalledAppFlow.from_client_secrets_file(path_to_secret, scopes=scopes)
+    except FileNotFoundError:
+        print("Can't find client_secret.json, set path_to_secret variable to path to a google app client secret "
+              "(see 2.2 of the course guidelines)")
+        exit(0)
+
 
     # Confirm credentials
     credentials = flow.run_local_server(host='localhost',
                                         port=8080,
                                         authorization_prompt_message='If your browser haven\'t opened, '
                                                                      'please visit this URL: {url}',
-                                        success_message='The auth authorization is complete. Close this tab.',
+                                        success_message='The auth authorization is complete. You may close this tab.',
                                         open_browser=True)
     # Activate fitness service
     fit_service = build('fitness', 'v1', credentials=credentials)
@@ -44,7 +50,7 @@ if __name__ == "__main__":
 
     # Create your own data sources
     # Make a request to create a dataSource. Argument body expects dict of your dataSource
-    accelerometer_source = fit_users.dataSources().create(userId='me', body=generate_source("accelerometer")).execute()
+    accelerometer_source = fit_users.dataSources().create(userId='me', body=generate_source("")).execute()
 
     # accelerometer_source is the same json as given dataSource with an additional field 'dataStreamId'
     f = open('accelerometer_source.json', 'w') # save your new dataSource to json
@@ -52,7 +58,7 @@ if __name__ == "__main__":
     f.close()
 
     # Make a request to create a dataSource. Argument body expects dict of your dataSource
-    power_source = fit_users.dataSources().create(userId='me', body=generate_source("power")).execute()
+    power_source = fit_users.dataSources().create(userId='me', body=generate_source("")).execute()
 
     # power_source is the same json as given dataSource with an additional field 'dataStreamId'
     f = open("power_source.json", 'w') # save your new dataSource to json

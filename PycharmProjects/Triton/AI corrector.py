@@ -4,10 +4,9 @@ import pickle
 import datetime
 import pandas
 
-#from matplotlib import style
-#style.use("ggplot")
 
-STAGE_AI = {-1:-1, 0: 97, 1:85, 2:70, 3:50, 4:30, 5:20, 6:10, 7:0}
+STAGE_AI = {-1: -1, 0: 97, 1: 85, 2: 70, 3: 50, 4: 30, 5: 20, 6: 10, 7: 0}
+
 
 class ReportAI(object):
     def __init__(self, path_to_report):
@@ -29,7 +28,7 @@ class ReportAI(object):
         self.record_name = record_number
 
     def saveToPickle(self, path_to_save="Z:\\Tetervak\\Reports\\reports 2.0\\reports_pickle"):
-        pickle_output = open(os.path.join(path_to_save, "{}.{}".format(self.record_name ,'.pickle')), 'wb')
+        pickle_output = open(os.path.join(path_to_save, "{}.{}".format(self.record_name, '.pickle')), 'wb')
         pickle.dump(self, pickle_output)
         pickle_output.close()
 
@@ -39,28 +38,28 @@ class FragmentList(object):
         self.fragments = []
         with open(path_to_fragments, 'r') as file:
             for line in file:
-                self.fragments.append(line.replace('\n', '').replace(';',''))
+                self.fragments.append(line.replace('\n', '').replace(';', ''))
 
         self.time_step = 300
         if '(' in self.fragments[0]:
-            self.time_step = self.fragments[0].split('(')[-1].split(')')[0].split('-') # xxx(90-120)xxx
-            self.time_step = int(self.time_step[-1]) - int(self.time_step[0]) # 120 - 90 = 30
+            self.time_step = self.fragments[0].split('(')[-1].split(')')[0].split('-')  # xxx(90-120)xxx
+            self.time_step = int(self.time_step[-1]) - int(self.time_step[0])  # 120 - 90 = 30
 
-    def fragments2pickle(self, path_to_save = "Z:\\Tetervak\\Reports\\reports 2.0\\fragments_pickle"):
+    def fragments2pickle(self, path_to_save="Z:\\Tetervak\\Reports\\reports 2.0\\fragments_pickle"):
         pickle_output = open("{}\\{}_second_fragments.pickle".format(path_to_save, self.time_step), 'wb')
         pickle.dump(self, pickle_output)
         pickle_output.close()
 
-    def rec_list(self, record_name): # Returns start seconds of all fragments for the record
+    def rec_list(self, record_name):  # Returns start seconds of all fragments for the record
         return sorted([matName2Time(f) for f in self.fragments if f[:6] == record_name and
-                       len(f.split('_')) == 3]) # return list for the record without records 000_1, 000_2
+                       len(f.split('_')) == 3])  # return list for the record without records 000_1, 000_2
 
 
 class BaredReport(object):
     def __init__(self, report, fragment_list):
         # Report information
         self.record_name = report.record_name
-        self.fragment_times = fragment_list.rec_list(self.record_name) # list of fragments start seconds
+        self.fragment_times = fragment_list.rec_list(self.record_name)  # list of fragments start seconds
         self.time_step = fragment_list.time_step
         self.wakefulness_level = 100
 
@@ -142,11 +141,11 @@ def reportTime(string_time: str, report_path: str):  # convert string to time in
             return datetime.datetime(year, month, day, int(t[:-4]), int(t[-4:-2]),
                                      int(t[-2:]))  # if time 12:33:00 in format 123300
         return ' '.join(["Wrong time format", ''.join(t)])
-    if (len(t) == 2):  # if there is one delimiter in the time
+    elif (len(t) == 2):  # if there is one delimiter in the time
         if (len(t[0]) == 2 or len(t[0]) == 1) and len(t[1]) == 2:
             return datetime.datetime(year, month, day, int(t[0]), int(t[1]), 00)
         return ' '.join(["Wrong time format", ''.join(t)])
-    if (len(t) == 3):  # if there are two delimiters in the time
+    elif (len(t) == 3):  # if there are two delimiters in the time
         if (len(t[0]) == 2 or len(t[0]) == 1) and len(t[1]) == 2 and len(t[2]) == 2:
             return datetime.datetime(year, month, day, int(t[0]), int(t[1]), int(t[2]))
         return ' '.join(["Wrong time format", ''.join(t)])
@@ -164,8 +163,8 @@ def matName2Time(matfile_name: str) -> [datetime.datetime, int]:  # convert Mat 
         name[-1] = name[-1].split('(')[0]
 
     dt = int((datetime.datetime(int(name[-2][0:4]), int(name[-2][4:6]), int(name[-2][6:8]),  # YYYY, MM, DD
-                           int(name[-1][:2]), int(name[-1][3:5]),  # HH, MM, SS
-                           int(name[-1][6:8])) + datetime.timedelta(seconds = start_second)).timestamp())
+               int(name[-1][:2]), int(name[-1][3:5]),  # HH, MM, SS
+               int(name[-1][6:8])) + datetime.timedelta(seconds = start_second)).timestamp())
     return dt
 
 def medicineCounter(med_table):

@@ -63,7 +63,7 @@ if __name__ == "__main__":
                                         port=8080,
                                         authorization_prompt_message='If your browser haven\'t opened, '
                                                                      'please visit this URL: {url}',
-                                        success_message='The auth authorization is complete. Close this tab.',
+                                        success_message='The auth authorization is complete. You may close this tab.',
                                         open_browser=True)
     # Activate fitness service
     fit_service = build('fitness', 'v1', credentials=credentials)

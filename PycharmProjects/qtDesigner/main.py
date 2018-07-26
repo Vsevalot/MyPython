@@ -5,17 +5,15 @@ import os
 
 class ExampleApp(QtWidgets.QMainWindow, desing.Ui_MainWindow):
     def __init__(self):
-        # Это здесь нужно для доступа к переменным, методам
-        # и т.д. в файле design.py
         super().__init__()
-        self.setupUi(self)  # Это нужно для инициализации нашего дизайна
+        self.setupUi(self)
 
 
 def main():
-    app = QtWidgets.QApplication(sys.argv)  # Новый экземпляр QApplication
-    window = ExampleApp()  # Создаём объект класса ExampleApp
-    window.show()  # Показываем окно
-    app.exec_()  # и запускаем приложение
+    app = QtWidgets.QApplication(sys.argv)
+    window = ExampleApp()
+    window.show()
+    app.exec_()
 
-if __name__ == '__main__':  # Если мы запускаем файл напрямую, а не импортируем
-    main()  # то запускаем функцию main() запускаем функцию main()
+if __name__ == '__main__':
+    main()

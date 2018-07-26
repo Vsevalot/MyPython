@@ -15,7 +15,7 @@ class Window(QtWidgets.QMainWindow):
             self.progressbar.setValue(progress_value)
             time.sleep(0.01)
 
-        QtWidgets.QMessageBox.information(self,"Title", "Text")
+        QtWidgets.QMessageBox.information(self, "Title", "Text")
 
 
 
@@ -41,7 +41,7 @@ class Window(QtWidgets.QMainWindow):
 
     def __init__(self):
         super(Window, self).__init__()
-        self.setGeometry(500, 400, 500, 300) # window settings
+        self.setGeometry(500, 400, 500, 300)  # window settings
         self.setWindowTitle('Test')
         path_to_icon = "e:\\Users\\sevamunger\\Documents\\GitHub\\MyPython\\PycharmProjects\\qtDesigner\\favicon.png"
         self.setWindowIcon(QtGui.QIcon(path_to_icon))
