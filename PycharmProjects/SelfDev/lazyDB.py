@@ -198,28 +198,43 @@ if __name__ == "__main__":
     REPORTS = [os.path.join(path_to_reports, f) for f in os.listdir(path_to_reports)
                if os.path.isfile(os.path.join(path_to_reports, f))]
     REPORTS = [Report(report, myPy.readCSV(report)) for report in REPORTS]
-    ignore_fragments = list(pd.read_excel("Z:\\Tetervak\\skipped\\24.07.18\\cut_records.xlsx", header=None)[0].values)
-    ignore_fragments = [f.replace("'", '') for f in ignore_fragments]
 
-    fixed_less_30 =  pd.read_csv("Z:\\Tetervak\\skipped\\24.07.18\\less_30_fixed.csv", sep=';', encoding='utf-8')
-    fixed_streaks =  pd.read_csv("Z:\\Tetervak\\skipped\\24.07.18\\streaks_fixed.csv", sep=';', encoding='utf-8')
-    fixed = pd.concat([fixed_less_30, fixed_streaks])
-    fixed_names = list(fixed["error_fragment"].values)
+    ignore_fragments = []
+    folders = ["01.08.18", "24.07.18", "07.08.18"]
+    for folder in folders:
+        path = "Z:\\Tetervak\\skipped\\{}\\broken_fragments.csv".format(folder)
+        folder_ignore = pd.read_csv(path, encoding='utf-8', header=None)[0].tolist()
+        path = "Z:\\Tetervak\\skipped\\{}\\artifacts.csv".format(folder)
+        folder_ignore += pd.read_csv(path, encoding='utf-8', header=None)[0].tolist()
+        for fragment in folder_ignore:
+            if fragment not in ignore_fragments:
+                ignore_fragments.append(fragment)
+
+    fixed = pd.DataFrame(columns=["error_fragment", "fixed_ai"])
+    for folder in folders:
+        fixed_less_30 = pd.read_csv("Z:\\Tetervak\\skipped\\{}\\less_30_fixed.csv".format(folder),
+                                    sep=';', encoding='utf-8')
+        fixed_streaks = pd.read_csv("Z:\\Tetervak\\skipped\\{}\\streaks_fixed.csv".format(folder),
+                                    sep=';', encoding='utf-8')
+        fixed = pd.concat([fixed, fixed_less_30, fixed_streaks])
+
+    fixed = fixed.drop_duplicates(subset=['error_fragment'], keep="first")
+    fixed_names = fixed["error_fragment"].tolist()
     fixed_names = [f.replace("'", '') for f in fixed_names]
-    fixed_ai = list(fixed["fixed_ai"].values)
     ignore_fragments += fixed_names
+    fixed_ai = fixed["fixed_ai"].tolist()
 
-    path_to_save = "Z:\\Tetervak\\file - stage\\File-stage_AI_30_sec.csv"
+    now = datetime.datetime.now().strftime("%Y-%m-%d")
+
+    path_to_save = "Z:\\Tetervak\\file - stage\\file-stage_AI_30_sec_{}.csv".format(now)
     fragments = myPy.readCSV("Z:\\Tetervak\\fragments\\All_fragments_30_sec.csv")[0]
-    print(len(fragments), len(ignore_fragments))
     fragments = [getStage(f, REPORTS) for f in fragments if f not in ignore_fragments]
-    print(len(fragments))
     fragments = [f for f in fragments if f is not None]
-    print(len(fragments))
+
     fixed_fragments = ["{};{}\n".format(fixed_names[i], round(fixed_ai[i], 1)) for i in range(len(fixed_ai))
-                       if fixed_ai[i] < 100.1]
+                       if fixed_ai[i] < 100.001]
     fragments += fixed_fragments
-    print(len(fragments), len(fixed_fragments))
+
     with open(path_to_save, 'w') as file:
         for f in fragments: 
             file.write(f)

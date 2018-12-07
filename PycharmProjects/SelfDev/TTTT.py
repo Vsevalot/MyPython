@@ -1,68 +1,30 @@
-#!/usr/bin/python3
-# -*- coding: utf-8 -*-
-
-"""
-ZetCode PyQt5 tutorial
-
-This example shows text which
-is entered in a QLineEdit
-in a QLabel widget.
-
-Author: Jan Bodnar
-Website: zetcode.com
-Last edited: August 2017
-"""
-
 import sys
-from PyQt5.QtWidgets import (QWidget, QLabel, QFontComboBox, QComboBox,
-                             QLineEdit, QApplication)
+from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QMessageBox
+from PyQt5.QtGui import QIcon
+from PyQt5.QtCore import pyqtSlot
 
 
-
-
-
-class Example(QWidget):
+class App(QWidget):
 
     def __init__(self):
         super().__init__()
-
+        self.title = 'PyQt5 messagebox - pythonspot.com'
+        self.left = 10
+        self.top = 10
+        self.width = 320
+        self.height = 200
         self.initUI()
 
     def initUI(self):
-        self.lbl = QLabel(self)
-        qle = QLineEdit(self)
+        self.setWindowTitle(self.title)
+        self.setGeometry(self.left, self.top, self.width, self.height)
 
-        qle.move(60, 100)
-        self.lbl.move(60, 40)
+        QMessageBox.information(self, 'Correction', "Correction complete")
 
-        qle.textChanged[str].connect(self.onChanged)
-
-        combo = QFontComboBox(self)
-        combo.removeItem(-1)
-        combo.addItem("AAAAAAAAAAAA")
-
-        combob = QComboBox(self)
-
-        combo.move(50, 50)
-        self.lbl.move(50, 150)
-
-        combo.activated[str].connect(self.onActivated)
-
-
-        self.setGeometry(300, 300, 280, 170)
-        self.setWindowTitle('QLineEdit')
         self.show()
-
-    def onActivated(self, text):
-        self.lbl.setText(text)
-        self.lbl.adjustSize()
-
-    def onChanged(self, text):
-        self.lbl.setText(text)
-        self.lbl.adjustSize()
 
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    ex = Example()
+    ex = App()
     sys.exit(app.exec_())

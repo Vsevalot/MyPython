@@ -11,16 +11,23 @@ from PyQt5.QtWidgets import QWidget, QApplication, QPushButton, QFileDialog
 from reportlib import Fragment, ReportAI
 
 
-def intersperse(array, item):
-    """
-    Inserts an item between all elements of a list
-    :param array: a list in which item should be insert
-    :param item: item which should be insert between elements of a list
-    :return: list with inserted item
-    """
+def intersperse(array, item):  # inserts an item between all elements of a list
     result = [item] * (len(array) * 2 - 1)
     result[::2] = array
     return result
+
+
+def removeRepeating(name_arr): # remove repeating from the "name" column
+    x = name_arr
+    i = 1
+    while i < len(x):
+        if x[i] is None:
+            i += 2
+            if i >= len(x):
+                break
+        x[i] = None
+        i += 1
+    return x
 
 
 def justName(matfile_name: str) -> str:
@@ -45,13 +52,7 @@ def matName2Time(matfile_name: str) -> [datetime.datetime, int]:  # convert Mat 
     return dt
 
 
-def findInStreak(err_df, streak=3):
-    """
-    Searches through a data frame for fragments which stay
-    :param err_df:  An dataframe where streaks should be find
-    :param streak:  Number of fragments that is count as a streak
-    :return:
-    """
+def findInStreak(err_df, streak=3):  # in_row parameter - the number of fragments in row which must be noted as anomaly
     records = list(err_df["fragment"])
     seconds = list(err_df["start_second"])
     time_stamp = records[0].split('(')[-1].split(')')[0].split('-')
@@ -87,11 +88,6 @@ def findInStreak(err_df, streak=3):
 
 
 def addStatisctic(data_frame):
-    """
-    Calculates statistics for a streak of fragments
-    :param data_frame: Dataframe with fragments' name, error etc
-    :return: Dataframe with advanced statistic
-    """
     records = data_frame["rec"].values
     records = [records[0]] + [None] * (len(records) - 1)
     statistic_dict = {column: [None] * 3 for column in data_frame.columns}
@@ -124,11 +120,11 @@ class CorrectionApp(QWidget):
         self.setWindowTitle("File picker")
         self.correct_btn = QPushButton("Choose a folder with skipped.mat", self)
         self.correct_btn.clicked.connect(self.correction)
-        self.correct_btn.setGeometry(50, 50, 200, 50)
+        self.correct_btn.setGeometry(100, 50, 150, 50)
 
         self.file_stage_btn = QPushButton("Generate file - stage", self)
         self.file_stage_btn.clicked.connect(self.generateFileStage)
-        self.file_stage_btn.setGeometry(50, 150, 200, 50)
+        self.file_stage_btn.setGeometry(100, 150, 150, 50)
         self.show()
 
 
@@ -177,11 +173,6 @@ class CorrectionApp(QWidget):
 
 
     def correctAI(self, path_to_folder):
-        """
-
-        :param path_to_folder:
-        :return:
-        """
         column_names = ["fragment", "expected_stage", "expected_AI", "calculated_AI", "error"]
         df = pd.read_csv(os.path.join(path_to_folder, "more_15_errors.csv"), delimiter=';', names=column_names)
         df["name_len"] = df["fragment"].apply(lambda name: len(name.split('_')))  # remove rec020_1_... fragments
@@ -202,7 +193,7 @@ class CorrectionApp(QWidget):
         streak_df = df[df["streak"].notnull()]
 
         #  Working with not streaks, less than 30 error
-        quick_fix_df = not_streak_df[not_streak_df["error"] <= 15]
+        quick_fix_df = not_streak_df[not_streak_df["error"] <= 30]
         quick_fix_df.is_copy = False
         quick_fix_df["fixed_ai"] = (quick_fix_df["expected_AI"] + quick_fix_df["calculated_AI"]) / 2
         quick_fix_df["fixed_ai"] = quick_fix_df["fixed_ai"].apply(int)  # to avoid conflicts with excel float
@@ -211,7 +202,7 @@ class CorrectionApp(QWidget):
         self.correctReports(quick_fix_df)
 
         #  Working with not streaks, more than 30 error - artifacts
-        big_error_df = not_streak_df[not_streak_df["error"] > 15]
+        big_error_df = not_streak_df[not_streak_df["error"] > 30]
         big_error_df.is_copy = False
         big_error_df["fixed_ai"] = [-1 for i in range(len(big_error_df["fragment"].values))]  # set ai to art. value
         big_error_df.to_csv(os.path.join(path_to_folder, "artifacts.csv"), sep=';', encoding='utf-8', index=False,
@@ -240,8 +231,7 @@ class CorrectionApp(QWidget):
 
 
     def brokenIgnore(self, path_to_folder):
-        broken_fragments = pd.read_csv(os.path.join(path_to_folder, "broken_fragments.csv"),
-                                       delimiter=';', names=["fragment"])
+        broken_fragments = pd.read_csv(os.path.join(path_to_folder, "broken_fragments.csv"), delimiter=';', names=["fragment"])
         broken_fragments = list(broken_fragments["fragment"].values)
         if len(broken_fragments) == 0:
             return
@@ -264,60 +254,27 @@ class CorrectionApp(QWidget):
 
 
     def sigmaIgnore(self, path_to_folder):
-        """
-        Reads all fragments from sigma6.csv in a folder, add these fragments to
-        :param path_to_folder:
-        :return:
-        """
-        sigma = pd.read_csv(os.path.join(path_to_folder, "sigma6.csv"), delimiter=';', header=None)
-        if sigma.shape[1] == 5:  # New sigma6 type with additional information
-            column_names = ["fragment", "expected_stage", "expected_AI", "calculated_AI", "error"]
-            sigma.columns = column_names
-            sigma.is_copy = False  # remove a SettingWithCopyWarning
-            sigma["start_second"] = sigma["fragment"].apply(matName2Time)  # form a column of fragment's start second
-            sigma["time"] = sigma["start_second"].apply(lambda x: datetime.datetime.fromtimestamp(x).time())
-            sigma["calculated_AI"] = sigma["calculated_AI"].apply(int)
-            sigma["rec"] = sigma["fragment"].apply(lambda x: x.split('_')[0])  # form a column of fragment's record
-            sigma = sigma.sort_values(["rec", "start_second"])  # sort fragments by record and these fragments by time
-            #  Searching for streaks
-            sigma["streak"] = findInStreak(sigma, streak=3)
-            sigma = sigma[sigma["streak"].notnull()]
-            sigma.index = [i for i in range(len(sigma))]
-            split_indexes = [-1] + sigma[sigma["streak"] == "last"].index.tolist()  # needn't after the last streak
-            split_df = [sigma.iloc[split_indexes[i] + 1: split_indexes[i + 1] + 1] for i in
-                        range(len(split_indexes) - 1)]
-            for i in range(len(split_df)):
-                split_df[i] = addStatisctic(split_df[i])
-            csv_df = pd.concat(split_df, ignore_index=True)
-            csv_df.to_csv(os.path.join(path_to_folder, "sigma6_info.csv"), sep=';', encoding='utf-8', index=False,
-                          columns=["rec", "expected_AI", "calculated_AI", "time"])  # visualisation of streaks
-
-        elif sigma.shape[1] == 1:  # Old sigma6 type with names only
-            sigma = list(sigma[0].values)
-            if len(sigma) == 0:
-                return
-            timestamp = sigma[0].split('(')[1].split(')')[0].split('-')  # time stamp like a str '90-120'
-            timestamp = int(timestamp[-1]) - int(timestamp[0])  # time stamp like int 30
-
-            ignore = []
-            if os.path.exists(os.path.join("Z:/Tetervak/fragments", "sigma_fragments_%d_sec.csv" % timestamp)):
-                ignore = pd.read_csv(os.path.join("Z:/Tetervak/fragments", "sigma_fragments_%d_sec.csv" % timestamp))
-                ignore = list(ignore["fragment"].values)
-
-            for fragment in sigma:
-                if fragment not in ignore:
-                    ignore.append(fragment)
-
-            ignore = pd.DataFrame({"fragment": ignore})
-            ignore.to_csv(os.path.join("Z:/Tetervak/fragments", "sigma_fragments_{}_sec.csv".format(timestamp)),
-                          index=False)
-        else:
-            print("Wrong number of columns: should be 5 (fragment, expected_stage, expected_AI, calculated_AI, error) "
-                  "or 1 (fragment)")
+        sigma = pd.read_csv(os.path.join(path_to_folder, "sigma6.csv"),delimiter=';', names=["fragment"])
+        sigma = list(sigma["fragment"].values)
+        if len(sigma) == 0:
             return
+        timestamp = sigma[0].split('(')[1].split(')')[0].split('-')  # time stamp like str '90-120'
+        timestamp = int(timestamp[-1]) - int(timestamp[0])  # time stamp like int 30
+
+        ignore = []
+        if os.path.exists(os.path.join("Z:/Tetervak/fragments", "sigma_fragments_%d_sec.csv" % timestamp)):
+            ignore = pd.read_csv(os.path.join("Z:/Tetervak/fragments", "sigma_fragments_%d_sec.csv" % timestamp))
+            ignore = list(ignore["fragment"].values)
+
+        for fragment in sigma:
+            if fragment not in ignore:
+                ignore.append(fragment)
+
+        ignore = pd.DataFrame({"fragment": ignore})
+        ignore.to_csv(os.path.join("Z:/Tetervak/fragments", "sigma_fragments_{}_sec.csv".format(timestamp)), index=False)
 
 
-    def generateFileStage(self, useall=False):
+    def generateFileStage(self):
         path_to_fragments = QFileDialog.getOpenFileName(self, "Choose a fragment list", "Z:/Tetervak/fragments")[0]
         if path_to_fragments == '':  # if no file selected
             return
@@ -337,9 +294,7 @@ class CorrectionApp(QWidget):
             sigma = list(pd.read_csv(os.path.join(path_to_folder, sigma_name))["fragment"].values)
 
         ignore = broken + sigma
-
-        if useall:  # If we don't ignore any fragments
-            ignore = []
+        ignore = []  # cos we don't need any ignores now
 
         fragments = sorted(list(pd.read_csv(path_to_fragments)["fragment"].values))
         fragments = [Fragment(fragments[i]) for i in range(len(fragments)) if fragments[i] not in ignore
@@ -366,6 +321,7 @@ class CorrectionApp(QWidget):
         path_to_save = "Z:/Tetervak/file - stage/file-stage_AI_30_sec_{}.csv".format(now)
 
         output.to_csv(path_to_save, index=False, columns=["fragment", "ai"], sep=';')
+
         print("File - stage generated")
 
 
@@ -384,6 +340,7 @@ class CorrectionApp(QWidget):
 
         fragments = pd.DataFrame({"fragment": fragments})
         fragments.to_csv(os.path.join(path_to_save, file_name), index=False)
+
         print("%s generated" % file_name)
 
 

@@ -1,0 +1,112 @@
+import os
+import pandas
+import datetime
+import pickle
+import numpy as np
+
+
+STAGES = [-1, 0, 1, 2, 3, 4, 5, 6, 7]  # -1 is a state with artefacts, 0 - wakefulness and so on
+STAGE_AI = {-1: -1, 0: 97, 1: 85, 2: 70, 3: 50, 4: 30, 5: 20, 6: 10, 7: 0}  # corresponding AI for the middle of a stage
+
+
+def fragmetList(path_to_fragments: str, path_to_save: str):  # creates txt files with all fragment's names
+    fragments = [f for f in os.listdir(path_to_fragments) if  # List of fragments name
+                 os.path.isfile(os.path.join(path_to_fragments, f))
+                 and len(f.split('_')) == 3]  # without weird recXXX_1_YYYYMMDD_HH.MM.SS(t1-t2).csv
+
+    with open(path_to_save, 'w') as file:
+        for f in fragments:
+            file.write("{}\n".format(f))
+        file.close()
+    return
+
+
+def medicineCounter(med_table):
+    med_cells = [cell for cell in med_table if not pandas.isnull(cell)]
+    medicines = []
+    for cell in med_cells:
+        for med in cell.split(','):
+            if med not in medicines:
+                medicines.append(med.replace(' ', ''))
+    return ', '.join(medicines)
+
+
+def timeFormat(time_stamps, file_name):  # time_stamps - report table with values of time and stage
+    date = file_name.split('_')[-1]  # something like rec002_300409.csv
+    second_stamps = []
+    for t in time_stamps["Time"]:
+        time = t.split(':')
+        second_stamps.append(
+            int(datetime.datetime(int("20" + date[4:6]), int(date[2:4]), int(date[0:2]),  # YYYY, MM, DD
+                                  int(time[0]), int(time[1]), int(time[2])).timestamp()))  # HH, MM, SS
+
+    if second_stamps != sorted(second_stamps):
+        print("Wrong time order")
+        exit(33)
+
+    stages = []
+    for stage in time_stamps["Stage"]:
+        stages.append(stage)
+
+    sec_stage = [second_stamps[0]]  # the first element is a start second
+    for i in range(len(second_stamps) - 1):
+        step = int(second_stamps[i + 1] - second_stamps[i])
+        for k in range(step):
+            sec_stage.append(STAGE_AI[stages[i]])  # append stage value for each second
+    return np.array(sec_stage)
+
+
+class Fragment(object):
+    def __init__(self, fragment_name):
+        rec, ymd, hms = fragment_name.split('_')
+        year = ymd[:4]
+        month = ymd[4:6]
+        day = ymd[6:]
+        hms = hms.split('(')[0]
+        hour, minute, second = hms.split('.')
+        start_second = int(datetime.datetime(int(year), int(month), int(day),
+                                             int(hour), int(minute), int(second)).timestamp())
+        time_delta = fragment_name.split('(')[-1].split(')')[0]
+        self.name = fragment_name
+        self.start, self.end = time_delta.split('-')
+        self.start = start_second + int(self.start)
+        self.end = start_second + int(self.end)
+        self.ai = None
+
+
+class ReportAI(object):
+    def __init__(self, path_to_report):
+        wb = pandas.read_csv(path_to_report, delimiter=';').dropna(axis=0, how='all')
+
+        self.doctor = wb["Doctor"][0] if not pandas.isnull(wb["Doctor"][0]) else "Unknown"
+        self.diagnosis = wb["Diagnosis"][0] if not pandas.isnull(wb["Diagnosis"][0]) else "Unknown"
+        self.electrodes_position = wb["Position"][0] if not pandas.isnull(wb["Position"][0]) else "Unknown"
+        self.medicines = medicineCounter(wb["Medicine"])
+        self.comment = wb["Overall comment"][0] if not pandas.isnull(wb["Overall comment"][0]) else "No comments"
+
+        time_stage = timeFormat(wb[["Time", "Stage"]], os.path.basename(path_to_report))
+        self.time = time_stage[0] + np.arange(len(time_stage) - 1)
+        self.stages = time_stage[1:]  # The first element in time_stage is the first second of a record
+        self.date = time_stage[0]  # The first element in time_stage is the first second of a record
+
+        record_number = os.path.basename(path_to_report).split('_')
+        self.name = [i for i in record_number if i[0:3] == "rec"][0]
+
+    def fragmentAI(self, start_second, end_second):
+        if self.time[0] > start_second or end_second > self.time[-1]:
+            return None
+        start = start_second - self.time[0]
+        time_delta = end_second - start_second
+        average_ai = 0
+        for i in range(time_delta):
+            if self.stages[start + i] == -1:  # if found at artifact - this fragment is artifacted
+                return -1  # return artifacted ai
+            average_ai += self.stages[start + i]
+        average_ai /= time_delta
+        return round(average_ai, 1)
+
+
+    def saveToPickle(self, path_to_save="Z:\\Tetervak\\Reports\\reports 2.0\\reports_pickle"):
+        pickle_output = open(os.path.join(path_to_save, "{}.{}".format(self.name, '.pickle')), 'wb')
+        pickle.dump(self, pickle_output)
+        pickle_output.close()

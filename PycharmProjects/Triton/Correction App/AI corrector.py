@@ -3,6 +3,7 @@ import os
 import pickle
 import datetime
 import pandas
+import numpy as np
 
 
 STAGE_AI = {-1: -1, 0: 97, 1: 85, 2: 70, 3: 50, 4: 30, 5: 20, 6: 10, 7: 0}
@@ -19,16 +20,29 @@ class ReportAI(object):
         self.comment = wb["Overall comment"][0] if not pandas.isnull(wb["Overall comment"][0]) else "No comments"
 
         time_stage = timeFormat(wb[["Time", "Stage"]], os.path.basename(path_to_report))
-        self.time = [second + time_stage[0] for second in range(len(time_stage) - 1)]
+        self.time = time_stage[0] + np.arange(len(time_stage) - 1)
         self.stages = time_stage[1:]  # The first element in time_stage is the first second of a record
         self.date = time_stage[0]  # The first element in time_stage is the first second of a record
 
         record_number = os.path.basename(path_to_report).split('_')
-        record_number = [i for i in record_number if i[0:3] == "rec"][0]
-        self.record_name = record_number
+        self.name = [i for i in record_number if i[0:3] == "rec"][0]
+
+    def fragmentAI(self, start_second, end_second):
+        if self.time[0] > start_second or end_second > self.time[-1]:
+            return None
+        start = start_second - self.time[0]
+        time_delta = end_second - start_second
+        average_ai = 0
+        for i in range(time_delta):
+            if self.stages[start + i] == -1:  # if found at artifact - this fragment is artifacted
+                return -1  # return artifacted ai
+            average_ai += self.stages[start + i]
+        average_ai /= time_delta
+        return round(average_ai, 1)
+
 
     def saveToPickle(self, path_to_save="Z:\\Tetervak\\Reports\\reports 2.0\\reports_pickle"):
-        pickle_output = open(os.path.join(path_to_save, "{}.{}".format(self.record_name, '.pickle')), 'wb')
+        pickle_output = open(os.path.join(path_to_save, "{}.{}".format(self.name, '.pickle')), 'wb')
         pickle.dump(self, pickle_output)
         pickle_output.close()
 
@@ -58,7 +72,7 @@ class FragmentList(object):
 class BaredReport(object):
     def __init__(self, report, fragment_list):
         # Report information
-        self.record_name = report.record_name
+        self.record_name = report.name
         self.fragment_times = fragment_list.rec_list(self.record_name)  # list of fragments start seconds
         self.time_step = fragment_list.time_step
         self.wakefulness_level = 100
@@ -308,6 +322,7 @@ if __name__ == "__main__":
     fragmentUpdating()
     reportUpdating()
 
+
     path_to_reports = "Z:\\Tetervak\\Reports\\reports 2.0\\reports_pickle"
     path_to_fragments = "Z:\\Tetervak\\Reports\\reports 2.0\\fragments_pickle"
 
@@ -315,6 +330,7 @@ if __name__ == "__main__":
                if os.path.isfile(os.path.join(path_to_reports, pck))]
     fragments = [pickle.load(open(os.path.join(path_to_fragments, pck), 'rb')) for pck in os.listdir(path_to_fragments)
                if os.path.isfile(os.path.join(path_to_fragments, pck))]
+
 
     test_report = reports[0]
     test_fragment = fragments[0]
